@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/index.css" />
+    <link rel="stylesheet" href="../css/admin.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Istok+Web&family=Sofia+Sans&display=swap" rel="stylesheet" />
+    <title>Painel Admin - SGCE</title>
+</head>
+<body>
+    <ul id="navbar">
+        <li><a href="../index.html">Home</a></li>
+        <li><a href="../matches.html">Partidas</a></li>
+        <li><a href="../tournaments.html">Torneios</a></li>
+        <li><a href="../statistics.html">Estatísticas</a></li>
+        <li><a href="../admin.html" class="active">Painel Admin</a></li>
+        <li style="float:right"><a href="../templates/login.html">Entrar</a></li>
+    </ul>
+
+    <div class="admin-container">
+        <h1>Painel Administrativo</h1>
+        
+        <div class="admin-section">
+            <h2>Importar Dados</h2>
+            <div class="import-section">
+                <label for="fileInput" class="file-input-label">Selecionar arquivo</label>
+                <input type="file" id="fileInput" accept=".json,.txt" />
+                <span id="fileName">Nenhum arquivo selecionado</span>
+                <button id="importButton" disabled>Importar Dados</button>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h2>Gerenciar Competições</h2>
+            <div class="competition-controls">
+                <button id="addCompetition">Adicionar Competição</button>
+                <button id="editCompetition">Editar Competição</button>
+                <button id="deleteCompetition">Excluir Competição</button>
+            </div>
+            
+            <div id="competitionsList" class="competitions-list">
+                <p>Nenhuma competição encontrada.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

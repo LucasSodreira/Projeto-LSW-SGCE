@@ -1,0 +1,34 @@
+{
+  "partidas": [
+    {
+      "id": 1,
+      "equipeA": "Time A",
+      "equipeB": "Time B",
+      "modalidade": "Futebol",
+      "data": "2023-05-10",
+      "placar": "2-1",
+      "status": "Finalizado"
+    },
+    {
+      "id": 2,
+      "equipeA": "Time C",
+      "equipeB": "Time D",
+      "modalidade": "Vôlei",
+      "data": "2023-05-12",
+      "placar": "3-1",
+      "status": "Finalizado"
+    }
+  ],
+  "times": [
+    {
+      "id": "Time A",
+      "jogadores": ["João", "Pedro", "Maria"],
+      "tecnico": "Carlos Silva"
+    },
+    {
+      "id": "Time B",
+      "jogadores": ["Ana", "Paulo", "Marcos"],
+      "tecnico": "Roberto Santos"
+    }
+  ]
+}

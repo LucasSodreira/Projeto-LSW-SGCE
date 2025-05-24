@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="css/index.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Istok+Web&family=Sofia+Sans&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+        <title>SGCE</title>
+    </head>
+    <body>
+        
+        <aside class="sidebar">
+            <header class="sidebar-header">
+                <img class="logo-img" src="images/IFRN_Arena__Where_Dreams_Are_Made.svg" />
+            </header>
+            <a href="../templates/login.html">Entrar</a>
+            <div class="admin-only" style="display: none;">
+                <a href="../templates/admin.html">Painel Admin</a>
+            </div>
+        </aside>
+
+        <ul id="navbar">
+            <li><a href="../matches.html">Partidas</a></li>
+            <li><a href="../tournaments.html">Torneios</a></li>
+            <li><a href="../statistics.html">Estatísticas</a></li>
+            <li style="float:right"><a href="../templates/login.html">Entrar</a></li>
+            <li class="admin-only" style="float:right; display: none;"><a href="../templates/admin.html">Painel Admin</a></li>
+        </ul>
+
+        <header class="top-header">
+            <a href="index.html"><img id="logo_site" src="images/IFRN_Arena__Where_Dreams_Are_Made.svg" /></a>
+            <div id="header-content">
+                <nav>
+                    <ul>
+                        <li><a href="../matches.html">Partidas</a></li>
+                        <li><a href="../tournaments.html">Torneios</a></li>
+                        <li><a href="../statistics.html">Estatísticas</a></li>
+                    </ul>
+                </nav>
+                <div id="buttons">
+                    <a href="#"><img class="img-profile" src="images/person.svg" alt="" /></a>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <div id="content-box">
+                <img id="image" src="images/Skipping_rope-bro_1.png" /> 
+
+                <div id="content-info">
+                    <h1>SGCE</h1>
+                    <h2>Sistema de Gerenciamento de <br>Competições de Esportes</h2>
+                    
+                    <div id="body-buttons">
+                        <h3>Esse sistema foi criado na tentativa de facilitar a vizualização e atualização de dados de partidas de competições dentro do IFRN.
+                            <br><br>
+                            Manuseado por bolsistas e professores para a atualização de dados, e por alunos para a vizualização de dados de partidas.
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <script src="js/auth.js"></script>
+    </body>
+</html>
