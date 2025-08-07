@@ -2,28 +2,41 @@ document.addEventListener('DOMContentLoaded', function() {
     // Recuperar dados das competições do localStorage
     let competitionsData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
     
-    // Se não há dados no localStorage, tentar carregar do arquivo dados.json
-    if (competitionsData.competitions.length === 0) {
-        loadDefaultData();
-    }
-    
     let currentEditingMatch = null;
     let currentCompetitionIndex = null;
     let currentMatchIndex = null;
     
-    // Inicializar a página
-    initializePage();
+    // Se não há dados no localStorage, tentar carregar do arquivo dados.json
+    if (competitionsData.competitions.length === 0) {
+        loadDefaultData();
+    } else {
+        // Se há dados, inicializar a página imediatamente
+        initializePage();
+    }
     
     function loadDefaultData() {
-        fetch('./dados.json')
+        fetch('../dados.json')
             .then(response => response.json())
             .then(data => {
-                competitionsData = data;
-                localStorage.setItem('competitionsData', JSON.stringify(data));
+                // Normalizar os dados para o formato esperado
+                const normalizedData = {
+                    competitions: [
+                        {
+                            name: "Competição Padrão",
+                            matches: data.partidas || [],
+                            teams: data.times || []
+                        }
+                    ]
+                };
+                
+                competitionsData = normalizedData;
+                localStorage.setItem('competitionsData', JSON.stringify(normalizedData));
                 initializePage();
             })
             .catch(error => {
                 console.error('Erro ao carregar dados padrão:', error);
+                // Mesmo sem dados, inicializar a página
+                initializePage();
             });
     }
     
@@ -31,6 +44,25 @@ document.addEventListener('DOMContentLoaded', function() {
         populateFilters();
         renderMatches();
         setupEventListeners();
+        
+        // Listener para mudanças no localStorage (quando dados são importados)
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'competitionsData') {
+                competitionsData = JSON.parse(e.newValue) || { competitions: [] };
+                populateFilters();
+                renderMatches();
+            }
+        });
+        
+        // Verificar periodicamente se os dados mudaram (para mudanças na mesma aba)
+        setInterval(function() {
+            const currentData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
+            if (JSON.stringify(currentData) !== JSON.stringify(competitionsData)) {
+                competitionsData = currentData;
+                populateFilters();
+                renderMatches();
+            }
+        }, 2000);
     }
     
     function populateFilters() {
@@ -52,7 +84,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const matchesGrid = document.getElementById('matchesGrid');
         matchesGrid.innerHTML = '';
         
+        // Debug: verificar se temos dados
+        console.log('Dados das competições:', competitionsData);
+        
         const matches = getAllMatches();
+        console.log('Partidas encontradas:', matches);
         
         if (matches.length === 0) {
             matchesGrid.innerHTML = '<p class="no-data">Nenhuma partida encontrada.</p>';
@@ -331,4 +367,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         alert('Partida excluída com sucesso!');
     }
+    
+    // Função global para recarregar dados (pode ser chamada de outras páginas)
+    window.reloadMatchesData = function() {
+        competitionsData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
+        populateFilters();
+        renderMatches();
+    };
 });

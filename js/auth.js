@@ -12,10 +12,17 @@ if (!localStorage.getItem('users')) {
 // Verifica se o usuário já está logado e redireciona se necessário
 function checkAuth() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    const isLoginPage = window.location.pathname.includes('/templates/login.html');
+    const isLoginPage = window.location.pathname.includes('login.html');
     
     if (currentUser && isLoginPage) {
-        window.location.href = '../index.html'; // Corrigido: volta um nível para acessar index.html
+        // Redirecionar baseado na localização atual
+        if (window.location.pathname.includes('/templates/')) {
+            window.location.href = '../index.html';
+        } else if (window.location.pathname.includes('/matches/')) {
+            window.location.href = '../index.html';
+        } else {
+            window.location.href = 'index.html';
+        }
     }
 }
 
@@ -41,13 +48,85 @@ function login(username, password) {
 // Função para realizar logout
 function logout() {
     localStorage.removeItem('currentUser');
-    window.location.href = '../index.html'; // Corrija também aqui se esta função for chamada de dentro de templates/
+    updateAuthUI(); // Atualizar interface imediatamente
+    
+    // Pequeno delay para garantir que a UI foi atualizada antes do redirect
+    setTimeout(() => {
+        // Verificar de onde está sendo chamado para redirecionar corretamente
+        if (window.location.pathname.includes('/templates/')) {
+            window.location.href = '../index.html';
+        } else if (window.location.pathname.includes('/matches/')) {
+            window.location.href = '../index.html';
+        } else {
+            window.location.href = 'index.html';
+        }
+    }, 100);
 }
 
 // Verifica se o usuário é admin
 function isAdmin() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     return currentUser && currentUser.role === 'admin';
+}
+
+// Função para atualizar o estado da interface baseado na autenticação
+function updateAuthUI() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    // Atualizar links de "Entrar" no navbar
+    const navbarLoginLinks = document.querySelectorAll('li a[href*="login.html"], li a[href="javascript:void(0)"]');
+    navbarLoginLinks.forEach(link => {
+        if (currentUser) {
+            link.textContent = `Sair (${currentUser.username})`;
+            link.href = "javascript:void(0)";
+            link.onclick = function(e) {
+                e.preventDefault();
+                logout();
+            };
+        } else {
+            link.textContent = "Entrar";
+            link.onclick = null;
+            // Definir href correto baseado na localização
+            if (window.location.pathname.includes('/templates/')) {
+                link.href = "login.html";
+            } else if (window.location.pathname.includes('/matches/')) {
+                link.href = "../templates/login.html";
+            } else {
+                link.href = "templates/login.html";
+            }
+        }
+    });
+    
+    // Atualizar link de perfil no header
+    const profileLink = document.getElementById('profileLink');
+    if (profileLink) {
+        if (currentUser) {
+            profileLink.title = `Logado como: ${currentUser.username} - Clique para ${currentUser.role === 'admin' ? 'ir ao painel admin' : 'sair'}`;
+            profileLink.onclick = function(e) {
+                e.preventDefault();
+                if (currentUser.role === 'admin') {
+                    if (window.location.pathname.includes('/templates/')) {
+                        window.location.href = 'admin.html';
+                    } else if (window.location.pathname.includes('/matches/')) {
+                        window.location.href = '../templates/admin.html';
+                    } else {
+                        window.location.href = 'templates/admin.html';
+                    }
+                } else {
+                    logout();
+                }
+            };
+        } else {
+            profileLink.title = "Fazer login";
+            profileLink.onclick = null;
+        }
+    }
+    
+    // Mostrar/esconder elementos de administrador
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(el => {
+        el.style.display = isAdmin() ? 'block' : 'none';
+    });
 }
 
 // Inicializa os listeners quando o documento estiver pronto
@@ -65,8 +144,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const errorMessage = document.getElementById('errorMessage');
             
             if (login(username, password)) {
-                // Verifica se estamos na pasta templates
+                // Redirecionar baseado na localização atual
                 if (window.location.pathname.includes('/templates/')) {
+                    window.location.href = '../index.html';
+                } else if (window.location.pathname.includes('/matches/')) {
                     window.location.href = '../index.html';
                 } else {
                     window.location.href = 'index.html';
@@ -77,33 +158,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Botões de login/logout no navbar
-    const loginButtons = document.querySelectorAll('a[href="#"]');
-    if (loginButtons) {
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        
-        loginButtons.forEach(button => {
-            if (currentUser) {
-                button.textContent = `Sair (${currentUser.username})`;
-                button.href = "javascript:void(0)";
-                button.onclick = logout;
-            } else {
-                button.textContent = "Entrar";
-                // Corrija o caminho para login.html
-                if (window.location.pathname.includes('/templates/')) {
-                    button.href = "login.html";
-                } else {
-                    button.href = "templates/login.html"; // Sem a barra inicial
-                }
-            }
-        });
-    }
-    
-    // Mostrar/esconder elementos de administrador
-    const adminElements = document.querySelectorAll('.admin-only');
-    if (adminElements.length > 0) {
-        adminElements.forEach(el => {
-            el.style.display = isAdmin() ? 'block' : 'none';
-        });
-    }
+    // Atualizar interface baseada na autenticação
+    updateAuthUI();
 });

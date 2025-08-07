@@ -2,33 +2,386 @@
   "partidas": [
     {
       "id": 1,
-      "equipeA": "Time A",
-      "equipeB": "Time B",
+      "equipeA": "Dragões FC",
+      "equipeB": "Águias United",
       "modalidade": "Futebol",
-      "data": "2023-05-10",
-      "placar": "2-1",
+      "data": "2024-03-15",
+      "placar": "3-1",
       "status": "Finalizado"
     },
     {
       "id": 2,
-      "equipeA": "Time C",
-      "equipeB": "Time D",
+      "equipeA": "Leões SC",
+      "equipeB": "Tigres FC",
+      "modalidade": "Futebol",
+      "data": "2024-03-18",
+      "placar": "2-2",
+      "status": "Finalizado"
+    },
+    {
+      "id": 3,
+      "equipeA": "Falcões Vôlei",
+      "equipeB": "Panteras Vôlei",
       "modalidade": "Vôlei",
-      "data": "2023-05-12",
+      "data": "2024-03-20",
+      "placar": "3-0",
+      "status": "Finalizado"
+    },
+    {
+      "id": 4,
+      "equipeA": "Tubarões Basketball",
+      "equipeB": "Cobras Basketball",
+      "modalidade": "Basquete",
+      "data": "2024-03-22",
+      "placar": "85-78",
+      "status": "Finalizado"
+    },
+    {
+      "id": 5,
+      "equipeA": "Águias United",
+      "equipeB": "Leões SC",
+      "modalidade": "Futebol",
+      "data": "2024-03-25",
+      "placar": "1-3",
+      "status": "Finalizado"
+    },
+    {
+      "id": 6,
+      "equipeA": "Tigres FC",
+      "equipeB": "Dragões FC",
+      "modalidade": "Futebol",
+      "data": "2024-03-28",
+      "placar": "0-2",
+      "status": "Finalizado"
+    },
+    {
+      "id": 7,
+      "equipeA": "Panteras Vôlei",
+      "equipeB": "Falcões Vôlei",
+      "modalidade": "Vôlei",
+      "data": "2024-04-02",
+      "placar": "2-3",
+      "status": "Finalizado"
+    },
+    {
+      "id": 8,
+      "equipeA": "Cobras Basketball",
+      "equipeB": "Tubarões Basketball",
+      "modalidade": "Basquete",
+      "data": "2024-04-05",
+      "placar": "92-88",
+      "status": "Finalizado"
+    },
+    {
+      "id": 9,
+      "equipeA": "Dragões FC",
+      "equipeB": "Leões SC",
+      "modalidade": "Futebol",
+      "data": "2024-04-08",
+      "placar": "4-1",
+      "status": "Finalizado"
+    },
+    {
+      "id": 10,
+      "equipeA": "Águias United",
+      "equipeB": "Tigres FC",
+      "modalidade": "Futebol",
+      "data": "2024-04-12",
+      "placar": "2-0",
+      "status": "Finalizado"
+    },
+    {
+      "id": 11,
+      "equipeA": "Lobos Handebol",
+      "equipeB": "Ursos Handebol",
+      "modalidade": "Handebol",
+      "data": "2024-04-15",
+      "placar": "28-24",
+      "status": "Finalizado"
+    },
+    {
+      "id": 12,
+      "equipeA": "Falcões Vôlei",
+      "equipeB": "Panteras Vôlei",
+      "modalidade": "Vôlei",
+      "data": "2024-04-18",
       "placar": "3-1",
       "status": "Finalizado"
+    },
+    {
+      "id": 13,
+      "equipeA": "Tubarões Basketball",
+      "equipeB": "Cobras Basketball",
+      "modalidade": "Basquete",
+      "data": "2024-04-22",
+      "placar": "95-82",
+      "status": "Finalizado"
+    },
+    {
+      "id": 14,
+      "equipeA": "Leões SC",
+      "equipeB": "Águias United",
+      "modalidade": "Futebol",
+      "data": "2024-04-25",
+      "placar": "3-2",
+      "status": "Finalizado"
+    },
+    {
+      "id": 15,
+      "equipeA": "Tigres FC",
+      "equipeB": "Dragões FC",
+      "modalidade": "Futebol",
+      "data": "2024-04-28",
+      "placar": "1-1",
+      "status": "Finalizado"
+    },
+    {
+      "id": 16,
+      "equipeA": "Ursos Handebol",
+      "equipeB": "Lobos Handebol",
+      "modalidade": "Handebol",
+      "data": "2024-05-02",
+      "placar": "26-30",
+      "status": "Finalizado"
+    },
+    {
+      "id": 17,
+      "equipeA": "Panteras Vôlei",
+      "equipeB": "Falcões Vôlei",
+      "modalidade": "Vôlei",
+      "data": "2024-05-05",
+      "placar": "1-3",
+      "status": "Finalizado"
+    },
+    {
+      "id": 18,
+      "equipeA": "Cobras Basketball",
+      "equipeB": "Tubarões Basketball",
+      "modalidade": "Basquete",
+      "data": "2024-05-08",
+      "placar": "88-91",
+      "status": "Finalizado"
+    },
+    {
+      "id": 19,
+      "equipeA": "Dragões FC",
+      "equipeB": "Tigres FC",
+      "modalidade": "Futebol",
+      "data": "2025-08-15",
+      "placar": "-",
+      "status": "Agendado"
+    },
+    {
+      "id": 20,
+      "equipeA": "Leões SC",
+      "equipeB": "Águias United",
+      "modalidade": "Futebol",
+      "data": "2025-08-18",
+      "placar": "-",
+      "status": "Agendado"
+    },
+    {
+      "id": 21,
+      "equipeA": "Falcões Vôlei",
+      "equipeB": "Panteras Vôlei",
+      "modalidade": "Vôlei",
+      "data": "2025-08-20",
+      "placar": "-",
+      "status": "Agendado"
+    },
+    {
+      "id": 22,
+      "equipeA": "Tubarões Basketball",
+      "equipeB": "Cobras Basketball",
+      "modalidade": "Basquete",
+      "data": "2025-08-22",
+      "placar": "-",
+      "status": "Agendado"
+    },
+    {
+      "id": 23,
+      "equipeA": "Lobos Handebol",
+      "equipeB": "Ursos Handebol",
+      "modalidade": "Handebol",
+      "data": "2025-08-25",
+      "placar": "-",
+      "status": "Agendado"
     }
   ],
   "times": [
     {
-      "id": "Time A",
-      "jogadores": ["João", "Pedro", "Maria"],
-      "tecnico": "Carlos Silva"
+      "id": "Dragões FC",
+      "nome": "Dragões FC",
+      "jogadores": [
+        "Gabriel Silva",
+        "Lucas Santos",
+        "Pedro Oliveira",
+        "Rafael Costa",
+        "Bruno Lima",
+        "Carlos Ferreira",
+        "Diego Martins",
+        "Eduardo Rocha",
+        "Felipe Alves",
+        "Gustavo Pereira",
+        "Henrique Souza"
+      ],
+      "tecnico": "Professor João Carlos"
     },
     {
-      "id": "Time B",
-      "jogadores": ["Ana", "Paulo", "Marcos"],
-      "tecnico": "Roberto Santos"
+      "id": "Águias United",
+      "nome": "Águias United",
+      "jogadores": [
+        "André Ribeiro",
+        "Caio Mendes",
+        "Daniel Cardoso",
+        "Fábio Nascimento",
+        "Igor Barbosa",
+        "João Vitor",
+        "Leonardo Dias",
+        "Mateus Rodrigues",
+        "Nicolas Araújo",
+        "Otávio Gomes",
+        "Paulo Henrique"
+      ],
+      "tecnico": "Professor Maria Fernanda"
+    },
+    {
+      "id": "Leões SC",
+      "nome": "Leões SC",
+      "jogadores": [
+        "Arthur Moreira",
+        "Bernardo Cruz",
+        "César Pinto",
+        "Davi Monteiro",
+        "Enzo Cavalcanti",
+        "Fernando Torres",
+        "Giovanni Lopes",
+        "Hugo Carvalho",
+        "Ícaro Freitas",
+        "Joaquim Neves",
+        "Kevin Machado"
+      ],
+      "tecnico": "Professor Roberto Silva"
+    },
+    {
+      "id": "Tigres FC",
+      "nome": "Tigres FC",
+      "jogadores": [
+        "Luan Miranda",
+        "Marcelo Teixeira",
+        "Nathan Correia",
+        "Otávio Batista",
+        "Pietro Caldeira",
+        "Raul Melo",
+        "Samuel Ramos",
+        "Thiago Azevedo",
+        "Vinícius Castro",
+        "Wesley Campos",
+        "Yuri Moura"
+      ],
+      "tecnico": "Professor Ana Paula"
+    },
+    {
+      "id": "Falcões Vôlei",
+      "nome": "Falcões Vôlei",
+      "jogadores": [
+        "Amanda Silva",
+        "Beatriz Costa",
+        "Camila Santos",
+        "Débora Lima",
+        "Fernanda Oliveira",
+        "Gabriela Martins",
+        "Helena Rocha",
+        "Isabela Alves",
+        "Juliana Pereira",
+        "Larissa Souza"
+      ],
+      "tecnico": "Professor Carlos Eduardo"
+    },
+    {
+      "id": "Panteras Vôlei",
+      "nome": "Panteras Vôlei",
+      "jogadores": [
+        "Marina Ribeiro",
+        "Natália Mendes",
+        "Olívia Cardoso",
+        "Patrícia Nascimento",
+        "Rafaela Barbosa",
+        "Sofia Vitor",
+        "Tatiana Dias",
+        "Valentina Rodrigues",
+        "Yasmin Araújo",
+        "Zoe Gomes"
+      ],
+      "tecnico": "Professor Luciana Ferreira"
+    },
+    {
+      "id": "Tubarões Basketball",
+      "nome": "Tubarões Basketball",
+      "jogadores": [
+        "Alexandre Moreira",
+        "Bruno Cruz",
+        "Caleb Pinto",
+        "Danilo Monteiro",
+        "Emanuel Cavalcanti",
+        "Fabrício Torres",
+        "Guilherme Lopes",
+        "Heitor Carvalho",
+        "Ivan Freitas",
+        "Jorge Neves"
+      ],
+      "tecnico": "Professor Marcos Antonio"
+    },
+    {
+      "id": "Cobras Basketball",
+      "nome": "Cobras Basketball",
+      "jogadores": [
+        "Kayque Miranda",
+        "Leandro Teixeira",
+        "Miguel Correia",
+        "Noah Batista",
+        "Oscar Caldeira",
+        "Pablo Melo",
+        "Ravi Ramos",
+        "Sérgio Azevedo",
+        "Túlio Castro",
+        "Vítor Campos"
+      ],
+      "tecnico": "Professor Sandra Regina"
+    },
+    {
+      "id": "Lobos Handebol",
+      "nome": "Lobos Handebol",
+      "jogadores": [
+        "Aline Silva",
+        "Bruna Costa",
+        "Carolina Santos",
+        "Denise Lima",
+        "Elisa Oliveira",
+        "Flávia Martins",
+        "Giovanna Rocha",
+        "Heloísa Alves",
+        "Ingrid Pereira",
+        "Jéssica Souza"
+      ],
+      "tecnico": "Professor Fernando José"
+    },
+    {
+      "id": "Ursos Handebol",
+      "nome": "Ursos Handebol",
+      "jogadores": [
+        "Karina Ribeiro",
+        "Letícia Mendes",
+        "Manuela Cardoso",
+        "Nicole Nascimento",
+        "Paloma Barbosa",
+        "Rebeca Vitor",
+        "Sabrina Dias",
+        "Thaís Rodrigues",
+        "Vitória Araújo",
+        "Wanessa Gomes"
+      ],
+      "tecnico": "Professor Patrícia Lima"
     }
   ]
 }

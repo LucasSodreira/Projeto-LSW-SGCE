@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verificar se o usuário é administrador, se não, redirecionar
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     if (!currentUser || currentUser.role !== 'admin') {
-        window.location.href = 'index.html';
+        window.location.href = '../index.html';
         return;
     }
     
