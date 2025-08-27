@@ -177,20 +177,3 @@ Aliases em inglês também funcionam se as chaves do JSON estiverem em inglês.
 
 O painel **Admin** atualmente funciona em modo **offline/local**: as ações (importar, adicionar, renomear e excluir competições) afetam somente o `localStorage` do navegador e NÃO são enviadas à API (`json-server`).
 
-Impactos:
-* Competições criadas no painel não aparecem nas páginas de Partidas/Estatísticas (estas leem apenas API + fallback `dados.json`).
-* Edição de resultados de partidas (na página de Partidas) usa a API quando disponível; no fallback (`dados.json`) as mudanças não persistem.
-
-Roadmap de melhoria sugerido:
-1. Integrar criação/edição de competições via endpoints (`POST /competicoes`).
-2. Permitir criar partidas diretamente no painel admin (`POST /partidas`).
-3. Sincronizar exportação/importação para também atualizar a API quando online.
-
-## 🟢 / 🔴 Badge de Fonte de Dados
-
-As páginas exibem um badge indicando a origem dos dados:
-* 🟢 **API (json-server)** ativa: leitura e escrita persistentes (partidas e agora competições pelo painel admin).
-* 🔴 **Fallback local (dados.json)**: somente leitura para partidas/estatísticas; painel admin pode operar offline via `localStorage` (competição não sincroniza automaticamente).
-* 🟡 Página inicial pode mostrar estado "indisponível" se nem API nem `dados.json` forem acessíveis.
-
-> Abra o projeto via um servidor estático (ou Live Server) e suba o `json-server` para usufruir de todas as funcionalidades.
