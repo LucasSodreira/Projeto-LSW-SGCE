@@ -1,0 +1,76 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage
+*.lcov
+
+# Build output / caches
+dist
+build
+.cache
+.parcel-cache
+.vite
+.eslintcache
+.stylelintcache
+.tsbuildinfo
+
+# Dependency directories
+node_modules/
+
+# Env files (add manually if you introduce secrets)
+.env
+.env.*
+!.env.example
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.swp
+*.swo
+*.bak
+*.tmp
+~$*
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Generated PDFs / exports
+*.pdf
+
+# Local json-server database backups (keep canonical db.json)
+db.backup*.json
+*.local.json
+
+# Cache of statistics or generated data
+/temp/
+/tmp/
+
+# SASS / Less intermediates
+*.sass-cache
+*.scssc
+
+# Optional lockfiles (uncomment the one you use and ignore others)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Images optimization temp
+*.orig
+
+# Mac attribute files
+._*
