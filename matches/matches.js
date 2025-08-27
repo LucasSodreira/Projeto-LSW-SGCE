@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
         populateFilters();
         renderMatches();
         setupEventListeners();
+    restoreFilters();
+    applyFilters();
         
         // Listener para mudanças no localStorage (quando dados são importados)
         window.addEventListener('storage', function(e) {
@@ -67,9 +69,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function populateFilters() {
         const competitionFilter = document.getElementById('competitionFilter');
+        const sportFilter = document.getElementById('sportFilter');
+        if (!competitionFilter || !sportFilter) return;
         
         // Limpar opções existentes (exceto "Todas as competições")
         competitionFilter.innerHTML = '<option value="all">Todas as competições</option>';
+        // Modalidades dinâmicas
+        sportFilter.innerHTML = '<option value="all">Todas as modalidades</option>';
         
         // Adicionar cada competição como opção
         competitionsData.competitions.forEach((competition, index) => {
@@ -78,17 +84,32 @@ document.addEventListener('DOMContentLoaded', function() {
             option.textContent = competition.name;
             competitionFilter.appendChild(option);
         });
+
+        // Coletar modalidades únicas a partir das partidas
+        const sportCounts = {};
+        competitionsData.competitions.forEach(competition => {
+            (competition.matches || []).forEach(match => {
+                const mSport = (match.modalidade || match.sport || '').trim();
+                if (mSport) {
+                    sportCounts[mSport] = (sportCounts[mSport] || 0) + 1;
+                }
+            });
+        });
+        Object.entries(sportCounts)
+            .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0],'pt-BR'))
+            .forEach(([s,count]) => {
+                const opt = document.createElement('option');
+                opt.value = s.toLowerCase();
+                opt.textContent = `${s} (${count})`;
+                sportFilter.appendChild(opt);
+            });
     }
     
     function renderMatches() {
         const matchesGrid = document.getElementById('matchesGrid');
         matchesGrid.innerHTML = '';
         
-        // Debug: verificar se temos dados
-        console.log('Dados das competições:', competitionsData);
-        
         const matches = getAllMatches();
-        console.log('Partidas encontradas:', matches);
         
         if (matches.length === 0) {
             matchesGrid.innerHTML = '<p class="no-data">Nenhuma partida encontrada.</p>';
@@ -238,6 +259,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Filtros
         document.getElementById('filterButton').addEventListener('click', applyFilters);
         document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+        // Persistir seleção ao mudar
+        ['competitionFilter','sportFilter','statusFilter','dateFilter'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', persistFilters);
+            }
+        });
         
         // Modais
         const modals = document.querySelectorAll('.modal');
@@ -268,20 +297,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function applyFilters() {
         const competitionFilter = document.getElementById('competitionFilter').value;
-        const sportFilter = document.getElementById('sportFilter').value;
+        const sportFilter = document.getElementById('sportFilter').value; // já vem em lowercase se dinâmico
         const statusFilter = document.getElementById('statusFilter').value;
         const dateFilter = document.getElementById('dateFilter').value;
+
+    persistFilters();
         
         const cards = document.querySelectorAll('.match-card');
         
         cards.forEach(card => {
             const cardCompetition = card.getAttribute('data-competition');
-            const cardSport = card.getAttribute('data-sport');
+            const cardSport = normalizeStr(card.getAttribute('data-sport'));
             const cardStatus = card.getAttribute('data-status');
             const cardDate = card.getAttribute('data-date');
             
             const competitionMatch = competitionFilter === 'all' || cardCompetition === competitionFilter;
-            const sportMatch = sportFilter === 'all' || cardSport.includes(sportFilter.toLowerCase());
+            const sportMatch = sportFilter === 'all' || cardSport === normalizeStr(sportFilter);
             const statusMatch = statusFilter === 'all' || cardStatus === statusFilter.toLowerCase().replace(' ', '_');
             const dateMatch = !dateFilter || cardDate === dateFilter;
             
@@ -291,6 +322,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 card.style.display = 'none';
             }
         });
+    }
+
+    function persistFilters(){
+        const data = {
+            competition: document.getElementById('competitionFilter').value,
+            sport: document.getElementById('sportFilter').value,
+            status: document.getElementById('statusFilter').value,
+            date: document.getElementById('dateFilter').value
+        };
+        localStorage.setItem('matchesFilters', JSON.stringify(data));
+    }
+
+    function restoreFilters(){
+        try {
+            const saved = JSON.parse(localStorage.getItem('matchesFilters'));
+            if (!saved) return;
+            if (saved.competition && document.querySelector(`#competitionFilter option[value="${saved.competition}"]`)) {
+                document.getElementById('competitionFilter').value = saved.competition;
+            }
+            if (saved.sport && document.querySelector(`#sportFilter option[value="${saved.sport}"]`)) {
+                document.getElementById('sportFilter').value = saved.sport;
+            }
+            if (saved.status) document.getElementById('statusFilter').value = saved.status;
+            if (saved.date) document.getElementById('dateFilter').value = saved.date;
+        } catch(e) { /* ignore */ }
+    }
+
+    function normalizeStr(str){
+        return (str||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').trim();
     }
     
     function clearFilters() {
@@ -341,6 +401,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Salvar no localStorage
         localStorage.setItem('competitionsData', JSON.stringify(competitionsData));
+    // Disparar evento customizado para outras páginas (ex: estatísticas) se estiverem abertas
+    try { window.dispatchEvent(new Event('competitionsDataUpdated')); } catch(e) {}
         
         // Fechar modal e atualizar visualização
         document.getElementById('editMatchModal').style.display = 'none';

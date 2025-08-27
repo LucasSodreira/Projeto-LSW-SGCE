@@ -79,13 +79,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Limpar filtros
         competitionFilter.innerHTML = '<option value="">Todas as Competições</option>';
-        sportFilter.innerHTML = '<option value="">Todos os Esportes</option>';
+        // Primeira opção = todas
+        sportFilter.innerHTML = '<option value="">Todas as Modalidades</option>';
         
         const competitions = new Set();
         const sports = new Set();
-          competitionsData.competitions.forEach(comp => {
+        competitionsData.competitions.forEach(comp => {
             competitions.add(comp.name);
-            sports.add(comp.sport || comp.modalidade);
+            // Coletar modalidades a partir das próprias partidas, já que o objeto competição pode não ter campo modalidade
+            if (Array.isArray(comp.matches)) {
+                comp.matches.forEach(match => {
+                    const modalidade = match.modalidade || match.sport;
+                    if (modalidade) sports.add(modalidade);
+                });
+            } else if (comp.sport || comp.modalidade) {
+                sports.add(comp.sport || comp.modalidade);
+            }
         });
         
         competitions.forEach(comp => {
@@ -95,7 +104,8 @@ document.addEventListener('DOMContentLoaded', function() {
             competitionFilter.appendChild(option);
         });
         
-        sports.forEach(sport => {
+        // Ordenar alfabeticamente para melhor UX
+        Array.from(sports).sort((a,b) => a.localeCompare(b, 'pt-BR')).forEach(sport => {
             const option = document.createElement('option');
             option.value = sport;
             option.textContent = sport;
@@ -114,22 +124,26 @@ document.addEventListener('DOMContentLoaded', function() {
             teamStats: {},
             playerStats: {},
             recentMatches: [],
-            upcomingMatches: []
+            upcomingMatches: [],
+            // Estatísticas separadas por modalidade
+            bySport: {}
         };
 
         const allTeams = new Set();
         const allMatches = [];
         const now = new Date();
+    // Mapa auxiliar para relacionar times -> jogadores
+    const teamPlayersMap = {};
 
         competitionsData.competitions.forEach(competition => {
             stats.totalCompetitions++;
-            
+
             // Processar times
             if (competition.teams) {
                 competition.teams.forEach(team => {
                     const teamId = team.id || team.nome;
                     allTeams.add(teamId);
-                    
+
                     if (team.jogadores) {
                         stats.totalPlayers += team.jogadores.length;
                         // Processar estatísticas de jogadores
@@ -140,15 +154,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                 stats.playerStats[playerId] = {
                                     name: playerName,
                                     team: team.nome || team.id,
-                                    goals: 0, // Será calculado baseado nas partidas
+                                    goals: 0,
                                     assists: 0,
                                     matches: 0,
-                                    position: player.posicao || 'N/A'
+                                    position: player.posicao || 'N/A',
+                                    sport: competition.sport || competition.modalidade || 'N/A'
                                 };
                             }
                         });
+                        teamPlayersMap[teamId] = team.jogadores.map(p => p.nome || p.id || p);
                     }
-                    
+
                     // Inicializar estatísticas do time
                     if (!stats.teamStats[teamId]) {
                         stats.teamStats[teamId] = {
@@ -159,29 +175,48 @@ document.addEventListener('DOMContentLoaded', function() {
                             draws: 0,
                             goalsFor: 0,
                             goalsAgainst: 0,
-                            goalDifference: 0
+                            goalDifference: 0,
+                            sport: competition.sport || competition.modalidade || 'N/A'
                         };
                     }
                 });
             }
-            
+
             // Processar partidas
             if (competition.matches) {
                 competition.matches.forEach(match => {
+                    // Determinar a modalidade real da partida
+                    const matchSport = match.modalidade || match.sport || competition.sport || competition.modalidade || 'N/A';
                     stats.totalMatches++;
                     allMatches.push({
                         ...match,
-                        competitionName: competition.name
+                        competitionName: competition.name,
+                        sport: matchSport
                     });
-                    
+
+                    // Inicializar estatísticas por modalidade se não existir
+                    const sport = matchSport;
+                    if (!stats.bySport[sport]) {
+                        stats.bySport[sport] = {
+                            totalMatches: 0,
+                            totalGoals: 0,
+                            teamStats: {},
+                            playerStats: {},
+                            recentMatches: [],
+                            upcomingMatches: []
+                        };
+                    }
+
                     // Contar gols totais
                     if (match.placar && typeof match.placar === 'string') {
                         const scores = match.placar.split('-').map(s => parseInt(s.trim()) || 0);
                         stats.totalGoals += scores.reduce((a, b) => a + b, 0);
-                          // Atualizar estatísticas dos times
+                        stats.bySport[sport].totalGoals += scores.reduce((a, b) => a + b, 0);
+
+                        // Atualizar estatísticas dos times
                         const homeTeam = match.timeA || match.home || match.equipeA;
                         const awayTeam = match.timeB || match.away || match.equipeB;
-                        
+
                         if (stats.teamStats[homeTeam] && stats.teamStats[awayTeam]) {
                             stats.teamStats[homeTeam].matches++;
                             stats.teamStats[awayTeam].matches++;
@@ -189,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             stats.teamStats[homeTeam].goalsAgainst += scores[1];
                             stats.teamStats[awayTeam].goalsFor += scores[1];
                             stats.teamStats[awayTeam].goalsAgainst += scores[0];
-                            
+
                             if (scores[0] > scores[1]) {
                                 stats.teamStats[homeTeam].victories++;
                                 stats.teamStats[awayTeam].defeats++;
@@ -201,68 +236,147 @@ document.addEventListener('DOMContentLoaded', function() {
                                 stats.teamStats[awayTeam].draws++;
                             }
                         }
+
+                        // Estatísticas por modalidade
+                        if (!stats.bySport[sport].teamStats[homeTeam]) {
+                            stats.bySport[sport].teamStats[homeTeam] = {
+                                name: homeTeam,
+                                matches: 0,
+                                victories: 0,
+                                defeats: 0,
+                                draws: 0,
+                                goalsFor: 0,
+                                goalsAgainst: 0,
+                                goalDifference: 0
+                            };
+                        }
+                        if (!stats.bySport[sport].teamStats[awayTeam]) {
+                            stats.bySport[sport].teamStats[awayTeam] = {
+                                name: awayTeam,
+                                matches: 0,
+                                victories: 0,
+                                defeats: 0,
+                                draws: 0,
+                                goalsFor: 0,
+                                goalsAgainst: 0,
+                                goalDifference: 0
+                            };
+                        }
+
+                        stats.bySport[sport].teamStats[homeTeam].matches++;
+                        stats.bySport[sport].teamStats[awayTeam].matches++;
+                        stats.bySport[sport].teamStats[homeTeam].goalsFor += scores[0];
+                        stats.bySport[sport].teamStats[homeTeam].goalsAgainst += scores[1];
+                        stats.bySport[sport].teamStats[awayTeam].goalsFor += scores[1];
+                        stats.bySport[sport].teamStats[awayTeam].goalsAgainst += scores[0];
+
+                        if (scores[0] > scores[1]) {
+                            stats.bySport[sport].teamStats[homeTeam].victories++;
+                            stats.bySport[sport].teamStats[awayTeam].defeats++;
+                        } else if (scores[0] < scores[1]) {
+                            stats.bySport[sport].teamStats[awayTeam].victories++;
+                            stats.bySport[sport].teamStats[homeTeam].defeats++;
+                        } else {
+                            stats.bySport[sport].teamStats[homeTeam].draws++;
+                            stats.bySport[sport].teamStats[awayTeam].draws++;
+                        }
                     }
-                    
+
+                    // Garantir que os times globais conheçam sua modalidade principal (última encontrada prevalece)
+                    const homeTeam = match.timeA || match.home || match.equipeA;
+                    const awayTeam = match.timeB || match.away || match.equipeB;
+                    if (stats.teamStats[homeTeam]) stats.teamStats[homeTeam].sport = matchSport;
+                    if (stats.teamStats[awayTeam]) stats.teamStats[awayTeam].sport = matchSport;
+
                     // Separar partidas recentes e próximas
                     if (match.data) {
                         const matchDate = new Date(match.data);
+                        const matchWithSport = { ...match, sport };
+
                         if (matchDate < now) {
-                            stats.recentMatches.push(match);
+                            stats.recentMatches.push(matchWithSport);
+                            stats.bySport[sport].recentMatches.push(matchWithSport);
                         } else {
-                            stats.upcomingMatches.push(match);
+                            stats.upcomingMatches.push(matchWithSport);
+                            stats.bySport[sport].upcomingMatches.push(matchWithSport);
                         }
                     }
                 });
             }
         });
 
+        // Após processar todas as partidas, atualizar modalidade dos jogadores e preencher playerStats por modalidade
+        Object.values(stats.playerStats).forEach(player => {
+            const teamSport = stats.teamStats[player.team]?.sport;
+            if (teamSport) {
+                player.sport = teamSport;
+                if (stats.bySport[teamSport]) {
+                    // Referência ao mesmo objeto para refletir atualizações (gols simulados depois)
+                    stats.bySport[teamSport].playerStats[player.name] = player;
+                }
+            }
+        });
+
         stats.totalTeams = allTeams.size;
-        
+
         // Ordenar partidas por data
         stats.recentMatches.sort((a, b) => new Date(b.data) - new Date(a.data));
         stats.upcomingMatches.sort((a, b) => new Date(a.data) - new Date(b.data));
-        
+
+        // Ordenar por modalidade também
+        Object.values(stats.bySport).forEach(sportStats => {
+            sportStats.recentMatches.sort((a, b) => new Date(b.data) - new Date(a.data));
+            sportStats.upcomingMatches.sort((a, b) => new Date(a.data) - new Date(b.data));
+        });
+
         // Calcular saldo de gols para cada time
         Object.values(stats.teamStats).forEach(team => {
             team.goalDifference = team.goalsFor - team.goalsAgainst;
         });
 
-        // Simular estatísticas de jogadores baseadas nos gols dos times
-        Object.values(stats.playerStats).forEach(player => {
-            const team = stats.teamStats[player.team];
-            if (team && team.goalsFor > 0) {
-                // Distribuir gols do time entre os jogadores de forma mais realística
-                const teamPlayers = Object.values(stats.playerStats).filter(p => p.team === player.team);
-                const totalGoals = team.goalsFor;
-                
-                if (teamPlayers.length > 0) {
-                    // Simular distribuição de gols (alguns jogadores marcam mais que outros)
-                    const playerGoalRatio = Math.random() * 0.6 + 0.1; // Entre 10% e 70% dos gols do time
-                    player.goals = Math.floor(totalGoals * playerGoalRatio / teamPlayers.length);
-                    player.matches = team.matches;
-                    player.assists = Math.floor(player.goals * 0.5); // Assistências baseadas nos gols
-                }
-            }
+        // Calcular saldo de gols por modalidade
+        Object.values(stats.bySport).forEach(sportStats => {
+            Object.values(sportStats.teamStats).forEach(team => {
+                team.goalDifference = team.goalsFor - team.goalsAgainst;
+            });
         });
 
-        // Garantir que pelo menos alguns jogadores tenham gols se houver gols totais
-        if (stats.totalGoals > 0 && Object.values(stats.playerStats).every(p => p.goals === 0)) {
-            // Se nenhum jogador tem gols, distribuir alguns aleatoriamente
-            const allPlayers = Object.values(stats.playerStats);
-            const numScorers = Math.min(allPlayers.length, Math.ceil(stats.totalGoals / 3));
-            
-            for (let i = 0; i < numScorers; i++) {
-                const randomPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)];
-                if (randomPlayer.goals === 0) {
-                    randomPlayer.goals = Math.floor(Math.random() * 5) + 1;
-                    randomPlayer.assists = Math.floor(randomPlayer.goals * 0.3);
+        // Reset de gols/assistências antes da distribuição por modalidade
+        Object.values(stats.playerStats).forEach(p => { p.goals = 0; p.assists = 0; p.matches = 0; });
+
+        // Distribuir gols por modalidade e time de forma independente
+        Object.entries(stats.bySport).forEach(([sportName, sportStats]) => {
+            Object.values(sportStats.teamStats).forEach(team => {
+                const playerNames = teamPlayersMap[team.name] || Object.values(stats.playerStats).filter(p => p.team === team.name).map(p => p.name);
+                if (!playerNames || playerNames.length === 0) return;
+                // Distribuir cada gol de forma aleatória entre os jogadores do time
+                for (let g = 0; g < team.goalsFor; g++) {
+                    const idx = Math.floor(Math.random() * playerNames.length);
+                    const playerName = playerNames[idx];
+                    // Encontrar objeto do jogador (global)
+                    const playerObj = Object.values(stats.playerStats).find(p => p.name === playerName && p.team === team.name);
+                    if (playerObj) {
+                        playerObj.goals += 1;
+                        playerObj.sport = sportName; // garantir modalidade correta
+                        // Referência também em bySport.playerStats
+                        sportStats.playerStats[playerObj.name] = playerObj;
+                    }
                 }
-            }
-        }
+                // Definir partidas jogadas para jogadores do time
+                playerNames.forEach(playerName => {
+                    const playerObj = Object.values(stats.playerStats).find(p => p.name === playerName && p.team === team.name);
+                    if (playerObj) playerObj.matches = team.matches;
+                });
+            });
+            // Gerar assistências proporcionais (40% dos gols com variação)
+            Object.values(sportStats.playerStats).forEach(pl => {
+                pl.assists = Math.max(0, Math.floor(pl.goals * (0.2 + Math.random() * 0.4)));
+            });
+        });
 
         // Atualizar display das estatísticas
         updateStatisticsDisplay(stats);
-        
+
         // Salvar estatísticas globalmente para uso nas outras seções
         window.currentStats = stats;
     }
@@ -297,8 +411,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('clubs-content');
         if (!container || !window.currentStats) return;
 
-        const teams = Object.values(window.currentStats.teamStats)
-            .filter(team => team.matches > 0)
+        // Usar estatísticas filtradas se disponíveis, senão usar todas
+        let teams = [];
+        const sportFilter = document.getElementById('sportFilter');
+        const selectedSport = sportFilter ? sportFilter.value : '';
+
+        // Se nenhuma modalidade foi selecionada (valor vazio), usar estatísticas gerais
+        if (!selectedSport) {
+            teams = Object.values(window.currentStats.teamStats);
+        } else if (window.currentStats.bySport && window.currentStats.bySport[selectedSport]) {
+            // Usar apenas estatísticas da modalidade selecionada
+            teams = Object.values(window.currentStats.bySport[selectedSport].teamStats || {});
+        } else {
+            // Fallback para estatísticas gerais se a modalidade não existir
+            teams = Object.values(window.currentStats.teamStats);
+        }
+
+        teams = teams.filter(team => team.matches > 0)
             .sort((a, b) => {
                 // Ordenar por pontos (vitórias * 3 + empates)
                 const pointsA = a.victories * 3 + a.draws;
@@ -309,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let html = `
             <div class="clubs-grid">
                 <div class="ranking-section">
-                    <h3>Ranking de Clubes</h3>
+                    <h3>Ranking de Clubes${selectedSport ? ` - ${selectedSport}` : ''}</h3>
                     <div class="ranking-table">
                         <div class="table-header">
                             <span>Pos</span>
@@ -325,23 +454,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
         `;
 
-        teams.slice(0, 10).forEach((team, index) => {
-            const points = team.victories * 3 + team.draws;
+        if (teams.length === 0) {
             html += `
-                <div class="table-row">
-                    <span class="position">${index + 1}</span>
-                    <span class="team-name">${team.name}</span>
-                    <span>${team.matches}</span>
-                    <span>${team.victories}</span>
-                    <span>${team.draws}</span>
-                    <span>${team.defeats}</span>
-                    <span>${team.goalsFor}</span>
-                    <span>${team.goalsAgainst}</span>
-                    <span class="${team.goalDifference >= 0 ? 'positive' : 'negative'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</span>
-                    <span class="points">${points}</span>
+                <div class="no-data">
+                    <p>Nenhum clube encontrado para os filtros selecionados.</p>
                 </div>
             `;
-        });
+        } else {
+            teams.slice(0, 10).forEach((team, index) => {
+                const points = team.victories * 3 + team.draws;
+                html += `
+                    <div class="table-row">
+                        <span class="position">${index + 1}</span>
+                        <span class="team-name">${team.name}</span>
+                        <span>${team.matches}</span>
+                        <span>${team.victories}</span>
+                        <span>${team.draws}</span>
+                        <span>${team.defeats}</span>
+                        <span>${team.goalsFor}</span>
+                        <span>${team.goalsAgainst}</span>
+                        <span class="${team.goalDifference >= 0 ? 'positive' : 'negative'}">${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}</span>
+                        <span class="points">${points}</span>
+                    </div>
+                `;
+            });
+        }
 
         html += `
                     </div>
@@ -374,30 +511,62 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById('players-content');
         if (!container || !window.currentStats) return;
 
-        const players = Object.values(window.currentStats.playerStats)
-            .sort((a, b) => b.goals - a.goals);
+        // Usar estatísticas filtradas se disponíveis, senão usar todas
+        let players = [];
+        const sportFilter = document.getElementById('sportFilter');
+        const selectedSport = sportFilter ? sportFilter.value : '';
+
+        // Se nenhuma modalidade foi selecionada (valor vazio), usar estatísticas gerais
+        if (!selectedSport) {
+            players = Object.values(window.currentStats.playerStats);
+        } else if (window.currentStats.bySport && window.currentStats.bySport[selectedSport]) {
+            // Usar apenas estatísticas da modalidade selecionada
+            // Primeiro tentar usar playerStats por modalidade se preenchido
+            const bySportPlayers = window.currentStats.bySport[selectedSport].playerStats;
+            if (bySportPlayers && Object.keys(bySportPlayers).length > 0) {
+                players = Object.values(bySportPlayers);
+            } else {
+                // Fallback: filtrar por modalidade do time do jogador
+                players = Object.values(window.currentStats.playerStats).filter(player => {
+                    return player.sport === selectedSport || window.currentStats.teamStats[player.team]?.sport === selectedSport;
+                });
+            }
+        } else {
+            // Fallback para estatísticas gerais se a modalidade não existir
+            players = Object.values(window.currentStats.playerStats);
+        }
+
+        players = players.sort((a, b) => b.goals - a.goals);
 
         let html = `
             <div class="players-grid">
                 <div class="top-scorers">
-                    <h3>Artilheiros</h3>
+                    <h3>Artilheiros${selectedSport ? ` - ${selectedSport}` : ''}</h3>
                     <div class="players-list">
         `;
 
-        players.slice(0, 10).forEach((player, index) => {
+        if (players.length === 0) {
             html += `
-                <div class="player-item">
-                    <span class="position">${index + 1}</span>
-                    <div class="player-info">
-                        <div class="player-name">${player.name}</div>
-                        <div class="player-team">${player.team}</div>
-                    </div>
-                    <div class="player-stats">
-                        <span class="goals">${player.goals} gols</span>
-                    </div>
+                <div class="no-data">
+                    <p>Nenhum jogador encontrado para os filtros selecionados.</p>
                 </div>
             `;
-        });
+        } else {
+            players.slice(0, 10).forEach((player, index) => {
+                html += `
+                    <div class="player-item">
+                        <span class="position">${index + 1}</span>
+                        <div class="player-info">
+                            <div class="player-name">${player.name}</div>
+                            <div class="player-team">${player.team}</div>
+                        </div>
+                        <div class="player-stats">
+                            <span class="goals">${player.goals} gols</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
 
         html += `
                     </div>
@@ -405,7 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="players-stats">
                     <div class="stat-card">
                         <h4>Total de Jogadores</h4>
-                        <div class="stat-value">${window.currentStats.totalPlayers}</div>
+                        <div class="stat-value">${players.length}</div>
                     </div>
                     <div class="stat-card">
                         <h4>Artilheiro</h4>
@@ -414,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="stat-card">
                         <h4>Média de Gols</h4>
-                        <div class="stat-value">${window.currentStats.totalMatches > 0 ? (window.currentStats.totalGoals / window.currentStats.totalMatches).toFixed(1) : '0'}</div>
+                        <div class="stat-value">${players.length > 0 && players[0]?.matches > 0 ? (players.reduce((sum, p) => sum + p.goals, 0) / players[0].matches).toFixed(1) : '0'}</div>
                         <div class="stat-detail">por partida</div>
                     </div>
                 </div>
@@ -430,13 +599,39 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!container || !window.currentStats) return;
 
         const stats = window.currentStats;
-        const recentMatches = stats.recentMatches.slice(0, 5);
-        const upcomingMatches = stats.upcomingMatches.slice(0, 5);
+        const sportFilter = document.getElementById('sportFilter');
+        const selectedSport = sportFilter ? sportFilter.value : '';
+
+        // Filtrar partidas baseado no status selecionado
+        let recentMatches = [...(stats.recentMatches || [])];
+        let upcomingMatches = [...(stats.upcomingMatches || [])];
+
+        const statusFilter = document.getElementById('statusFilter');
+        const selectedStatus = statusFilter ? statusFilter.value : '';
+
+        if (selectedStatus) {
+            if (selectedStatus === 'finalizado') {
+                upcomingMatches = [];
+            } else if (selectedStatus === 'agendado') {
+                recentMatches = [];
+            } else if (selectedStatus === 'andamento') {
+                recentMatches = recentMatches.filter(match =>
+                    !match.placar || match.placar === '' || match.placar === '0-0'
+                );
+                upcomingMatches = [];
+            }
+        }
+
+        // Filtrar partidas por modalidade se uma modalidade específica foi selecionada
+        if (selectedSport) {
+            recentMatches = recentMatches.filter(match => match.sport === selectedSport);
+            upcomingMatches = upcomingMatches.filter(match => match.sport === selectedSport);
+        }
 
         let html = `
             <div class="summary-grid">
                 <div class="tournament-overview">
-                    <h3>Resumo Geral</h3>
+                    <h3>Resumo Geral${selectedSport ? ` - ${selectedSport}` : ''}</h3>
                     <div class="overview-stats">
                         <div class="overview-item">
                             <span class="label">Competições</span>
@@ -463,40 +658,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <div class="matches-section">
                     <div class="recent-matches">
-                        <h3>Últimas Partidas</h3>
+                        <h3>Últimas Partidas${selectedStatus ? ` (${selectedStatus})` : ''}</h3>
                         <div class="matches-list">
-        `;        recentMatches.forEach(match => {
+        `;
+
+        if (recentMatches.length === 0) {
             html += `
-                <div class="match-item">
-                    <div class="teams">
-                        <span class="home-team">${match.timeA || match.home || match.equipeA}</span>
-                        <span class="score">${match.placar || 'vs'}</span>
-                        <span class="away-team">${match.timeB || match.away || match.equipeB}</span>
-                    </div>
-                    <div class="match-date">${formatDate(match.data)}</div>
+                <div class="no-data">
+                    <p>Nenhuma partida encontrada.</p>
                 </div>
             `;
-        });
+        } else {
+            recentMatches.slice(0, 5).forEach(match => {
+                html += `
+                    <div class="match-item">
+                        <div class="teams">
+                            <span class="home-team">${match.timeA || match.home || match.equipeA}</span>
+                            <span class="score">${match.placar || 'vs'}</span>
+                            <span class="away-team">${match.timeB || match.away || match.equipeB}</span>
+                        </div>
+                        <div class="match-date">${formatDate(match.data)}</div>
+                    </div>
+                `;
+            });
+        }
 
         html += `
                         </div>
                     </div>
                     
                     <div class="upcoming-matches">
-                        <h3>Próximas Partidas</h3>
+                        <h3>Próximas Partidas${selectedStatus ? ` (${selectedStatus})` : ''}</h3>
                         <div class="matches-list">
-        `;        upcomingMatches.forEach(match => {
+        `;
+
+        if (upcomingMatches.length === 0) {
             html += `
-                <div class="match-item">
-                    <div class="teams">
-                        <span class="home-team">${match.timeA || match.home || match.equipeA}</span>
-                        <span class="vs">vs</span>
-                        <span class="away-team">${match.timeB || match.away || match.equipeB}</span>
-                    </div>
-                    <div class="match-date">${formatDate(match.data)}</div>
+                <div class="no-data">
+                    <p>Nenhuma partida encontrada.</p>
                 </div>
             `;
-        });
+        } else {
+            upcomingMatches.slice(0, 5).forEach(match => {
+                html += `
+                    <div class="match-item">
+                        <div class="teams">
+                            <span class="home-team">${match.timeA || match.home || match.equipeA}</span>
+                            <span class="vs">vs</span>
+                            <span class="away-team">${match.timeB || match.away || match.equipeB}</span>
+                        </div>
+                        <div class="match-date">${formatDate(match.data)}</div>
+                    </div>
+                `;
+            });
+        }
 
         html += `
                         </div>
@@ -520,21 +735,26 @@ document.addEventListener('DOMContentLoaded', function() {
         // Filtros
         const competitionFilter = document.getElementById('competitionFilter');
         const sportFilter = document.getElementById('sportFilter');
+        const statusFilter = document.getElementById('statusFilter');
         
         if (competitionFilter) {
             competitionFilter.addEventListener('change', function() {
-                // Implementar filtro por competição
                 filterData();
             });
         }
         
         if (sportFilter) {
             sportFilter.addEventListener('change', function() {
-                // Implementar filtro por esporte
                 filterData();
             });
         }
 
+        if (statusFilter) {
+            statusFilter.addEventListener('change', function() {
+                filterData();
+            });
+        }
+        
         // Botão de exportar
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {
@@ -569,23 +789,79 @@ document.addEventListener('DOMContentLoaded', function() {
     function filterData() {
         const competitionFilter = document.getElementById('competitionFilter');
         const sportFilter = document.getElementById('sportFilter');
-        
+        const statusFilter = document.getElementById('statusFilter');
+
         const selectedCompetition = competitionFilter ? competitionFilter.value : '';
         const selectedSport = sportFilter ? sportFilter.value : '';
-        
+        const selectedStatus = statusFilter ? statusFilter.value : '';
+
+        // Se nenhum filtro foi aplicado, apenas re-renderizar com os dados atuais
+        if (!selectedCompetition && !selectedSport && !selectedStatus) {
+            // Re-renderizar seção ativa sem recalcular estatísticas
+            const activeTab = document.querySelector('.nav-tab.active');
+            if (activeTab) {
+                const section = activeTab.getAttribute('data-section');
+                if (section === 'clubs') {
+                    renderClubStatistics();
+                } else if (section === 'players') {
+                    renderPlayerStatistics();
+                } else if (section === 'summary') {
+                    renderSummaryStatistics();
+                }
+            }
+            return;
+        }
+
         // Aplicar filtros e recalcular estatísticas
         const filteredData = {competitions: competitionsData.competitions.filter(comp => {
                 const matchesCompetition = !selectedCompetition || comp.name === selectedCompetition;
-                const matchesSport = !selectedSport || comp.sport === selectedSport || comp.modalidade === selectedSport;
+                let matchesSport = true;
+                if (selectedSport) {
+                    // Verifica competição ou alguma partida dentro dela
+                    matchesSport = (comp.sport === selectedSport || comp.modalidade === selectedSport);
+                    if (!matchesSport && Array.isArray(comp.matches)) {
+                        matchesSport = comp.matches.some(m => (m.modalidade || m.sport) === selectedSport);
+                    }
+                }
                 return matchesCompetition && matchesSport;
-            })
-        };
-        
+            })};
+
         // Temporariamente substituir os dados para recálculo
         const originalData = competitionsData;
         competitionsData = filteredData;
         calculateStatistics();
         competitionsData = originalData;
+
+        // Aplicar filtro de status nas partidas exibidas
+        if (selectedStatus && window.currentStats) {
+            const now = new Date();
+            if (selectedStatus === 'finalizado') {
+                window.currentStats.recentMatches = window.currentStats.recentMatches || [];
+                window.currentStats.upcomingMatches = [];
+            } else if (selectedStatus === 'agendado') {
+                window.currentStats.upcomingMatches = window.currentStats.upcomingMatches || [];
+                window.currentStats.recentMatches = [];
+            } else if (selectedStatus === 'andamento') {
+                // Para "em andamento", mostrar partidas recentes sem placar definido ou com placar vazio
+                window.currentStats.recentMatches = (window.currentStats.recentMatches || []).filter(match =>
+                    !match.placar || match.placar === '' || match.placar === '0-0'
+                );
+                window.currentStats.upcomingMatches = [];
+            }
+        }
+
+        // Re-renderizar seção ativa após aplicar filtros
+        const activeTab = document.querySelector('.nav-tab.active');
+        if (activeTab) {
+            const section = activeTab.getAttribute('data-section');
+            if (section === 'clubs') {
+                renderClubStatistics();
+            } else if (section === 'players') {
+                renderPlayerStatistics();
+            } else if (section === 'summary') {
+                renderSummaryStatistics();
+            }
+        }
     }
 
     // Exportar estatísticas em PDF

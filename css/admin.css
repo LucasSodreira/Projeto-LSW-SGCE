@@ -77,6 +77,28 @@ button:disabled {
     margin-bottom: 20px;
 }
 
+.data-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
 .competitions-list {
     background-color: #f9f9f9;
     border: 1px solid #eee;
