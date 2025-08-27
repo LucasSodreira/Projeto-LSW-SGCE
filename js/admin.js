@@ -1,78 +1,54 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar se o usuário é administrador, se não, redirecionar
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (!currentUser || currentUser.role !== 'admin') {
-        window.location.href = '../index.html';
-        return;
-    }
-    
-    // Manipulação de arquivos
+    if (!currentUser || currentUser.role !== 'admin') { window.location.href = '../index.html'; return; }
+
+    let dataSource = 'api'; // 'api' | 'offline'
+    let dataSourceError = '';
+    let competitionsCache = [];
+
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
     const importButton = document.getElementById('importButton');
-    
-    fileInput.addEventListener('change', function(e) {
-        if (fileInput.files.length > 0) {
-            fileName.textContent = fileInput.files[0].name;
-            importButton.disabled = false;
-        } else {
-            fileName.textContent = 'Nenhum arquivo selecionado';
-            importButton.disabled = true;
-        }
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) { fileName.textContent = fileInput.files[0].name; importButton.disabled = false; }
+        else { fileName.textContent = 'Nenhum arquivo selecionado'; importButton.disabled = true; }
     });
-    
-    importButton.addEventListener('click', function() {
-        const file = fileInput.files[0];
+
+    importButton.addEventListener('click', () => {
+        const file = fileInput.files[0]; if(!file) return;
         const reader = new FileReader();
-        
-        reader.onload = function(event) {
-            try {
-                // Tentar parsear como JSON
-                const data = JSON.parse(event.target.result);
-                processImportedData(data);
-            } catch (e) {
-                // Se falhar, considerar como TXT e tentar parsear
-                try {
-                    const textData = event.target.result;
-                    const parsedData = parseTextData(textData);
-                    processImportedData(parsedData);
-                } catch (err) {
-                    alert('Erro ao processar o arquivo. Verifique o formato.');
-                    console.error(err);
-                }
+        reader.onload = e => {
+            try { processImportedData(JSON.parse(e.target.result)); }
+            catch(err){
+                try { processImportedData(parseTextData(e.target.result)); }
+                catch(inner){ alert('Erro ao processar o arquivo.'); console.error(inner); }
             }
         };
-        
-        reader.onerror = function() {
-            alert('Erro ao ler o arquivo.');
-        };
-        
+        reader.onerror = () => alert('Erro ao ler o arquivo.');
         reader.readAsText(file);
     });
-    
-    // Função para processar os dados importados
-    function processImportedData(data) {
+
+    async function initData(){
         try {
-            // Validar os dados importados
-            const validationResult = validateImportedData(data);
-            if (!validationResult.valid) {
-                alert(`Erro na validação dos dados: ${validationResult.error}`);
-                return;
-            }
+            if(!window.API || !window.API.CompetitionsAPI) throw new Error('Camada API indisponível');
+            competitionsCache = await window.API.CompetitionsAPI.list();
+            dataSource = 'api';
+        } catch(e){ dataSource='offline'; dataSourceError=e.message || 'Falha desconhecida'; }
+        updateCompetitionsList();
+        showDataSourceBadge();
+    }
+    initData();
 
-            // Verificar o formato dos dados e normalizar se necessário
-            const normalizedData = normalizeData(data);
-
-            // Salvar no localStorage
-            localStorage.setItem('competitionsData', JSON.stringify(normalizedData));
-            alert('Dados importados com sucesso!');
-
-            // Atualizar a lista de competições
-            updateCompetitionsList();
-        } catch (error) {
-            alert('Erro ao processar os dados importados: ' + error.message);
-            console.error(error);
-        }
+    function processImportedData(data){
+        try {
+            const validation = validateImportedData(data);
+            if(!validation.valid){ alert('Erro na validação: '+validation.error); return; }
+            const normalized = normalizeData(data);
+            localStorage.setItem('competitionsData', JSON.stringify(normalized));
+            if(dataSource==='offline') updateCompetitionsList();
+            alert('Dados importados com sucesso! (Modo offline)');
+        } catch(e){ alert('Erro ao processar importação: '+e.message); }
     }
     
     // Função para normalizar dados em diferentes formatos para um formato padrão
@@ -236,152 +212,95 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
-    // Função para atualizar a lista de competições
-    function updateCompetitionsList() {
-        const competitionsList = document.getElementById('competitionsList');
-        const data = JSON.parse(localStorage.getItem('competitionsData'));
-        
-        if (!data || !data.competitions || data.competitions.length === 0) {
-            competitionsList.innerHTML = '<p>Nenhuma competição encontrada.</p>';
-            return;
+    function updateCompetitionsList(){
+        const el = document.getElementById('competitionsList');
+        let comps;
+        if(dataSource==='api'){ comps = competitionsCache; }
+        else {
+            const local = JSON.parse(localStorage.getItem('competitionsData'));
+            comps = local && local.competitions ? local.competitions : [];
         }
-        
-        let html = '<ul>';
-        data.competitions.forEach((comp, index) => {
-            html += `<li data-id="${index}"><strong>${comp.name}</strong>`;
-            
-            // Adiciona detalhes sobre times
-            if (comp.teams && comp.teams.length > 0) {
-                html += `<br>Times (${comp.teams.length}): `;
-                html += comp.teams.slice(0, 3).map(team => team.nome || team.name || team.id).join(', ');
-                if (comp.teams.length > 3) {
-                    html += `, ...`;
-                }
-            }
-            
-            // Adiciona detalhes sobre partidas
-            if (comp.matches && comp.matches.length > 0) {
-                html += `<br>Partidas (${comp.matches.length}): `;
-                html += comp.matches.slice(0, 2).map(match => {
-                    const equipeA = match.equipeA || match.team1;
-                    const equipeB = match.equipeB || match.team2;
-                    const placar = match.placar || match.score || '0-0';
-                    return `${equipeA} vs ${equipeB} (${placar})`;
-                }).join(', ');
-                
-                if (comp.matches.length > 2) {
-                    html += `, ...`;
-                }
-            }
-            
-            html += `</li>`;
-        });
-        html += '</ul>';
-        
-        competitionsList.innerHTML = html;
+        if(!comps || comps.length===0){ el.innerHTML='<p>Nenhuma competição encontrada.</p>'; return; }
+        let html='<ul>';
+        comps.forEach((c,i)=>{ html += `<li data-id="${i}"><strong>${c.name || c.nome}</strong></li>`; });
+        html+='</ul>';
+        el.innerHTML=html;
     }
     
-    // Inicializar a lista de competições
-    updateCompetitionsList();
-    
     // Adicionar handlers para os botões de gerenciamento
-    document.getElementById('addCompetition').addEventListener('click', function() {
-        const name = prompt('Nome da nova competição:');
-        if (!name) return;
-        
-        const data = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
-        
-        data.competitions.push({
-            name: name,
-            teams: [],
-            matches: []
-        });
-        
-        localStorage.setItem('competitionsData', JSON.stringify(data));
-        updateCompetitionsList();
-    });
-    
-    // Implementar edição e exclusão de competições
-    document.getElementById('editCompetition').addEventListener('click', function() {
-        const selectedItems = document.querySelectorAll('#competitionsList li.selected');
-        if (selectedItems.length !== 1) {
-            alert('Selecione exatamente uma competição para editar.');
-            return;
-        }
-        
-        const index = selectedItems[0].getAttribute('data-id');
-        const data = JSON.parse(localStorage.getItem('competitionsData'));
-        const competition = data.competitions[index];
-        
-        const newName = prompt('Novo nome para a competição:', competition.name);
-        if (newName && newName !== competition.name) {
-            competition.name = newName;
-            localStorage.setItem('competitionsData', JSON.stringify(data));
+    document.getElementById('addCompetition').addEventListener('click', async () => {
+        const name = prompt('Nome da nova competição:'); if(!name) return;
+        if(dataSource==='api'){
+            try { const created = await window.API.CompetitionsAPI.create({ name }); competitionsCache.push(created); updateCompetitionsList(); alert('Competição criada na API.'); }
+            catch(e){ alert('Falha ao criar competição na API: '+e.message); }
+        } else {
+            const local = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
+            local.competitions.push({ name, teams:[], matches:[] });
+            localStorage.setItem('competitionsData', JSON.stringify(local));
             updateCompetitionsList();
         }
     });
     
-    document.getElementById('deleteCompetition').addEventListener('click', function() {
-        const selectedItems = document.querySelectorAll('#competitionsList li.selected');
-        if (selectedItems.length !== 1) {
-            alert('Selecione exatamente uma competição para excluir.');
-            return;
+    // Implementar edição e exclusão de competições
+    document.getElementById('editCompetition').addEventListener('click', async () => {
+        const selected = document.querySelectorAll('#competitionsList li.selected');
+        if(selected.length!==1){ alert('Selecione exatamente uma competição.'); return; }
+        const index = selected[0].getAttribute('data-id');
+        let comp;
+        if(dataSource==='api') comp = competitionsCache[index];
+        else { const local = JSON.parse(localStorage.getItem('competitionsData')); comp = local.competitions[index]; }
+        const newName = prompt('Novo nome da competição:', comp.name); if(!newName || newName===comp.name) return;
+        if(dataSource==='api'){
+            try { await window.API.CompetitionsAPI.patch(comp.id, { name:newName }); comp.name=newName; updateCompetitionsList(); }
+            catch(e){ alert('Erro ao renomear na API: '+e.message); }
+        } else {
+            comp.name=newName; const local = JSON.parse(localStorage.getItem('competitionsData')); local.competitions[index]=comp; localStorage.setItem('competitionsData', JSON.stringify(local)); updateCompetitionsList();
         }
-        
-        if (!confirm('Tem certeza que deseja excluir esta competição?')) {
-            return;
+    });
+    
+    document.getElementById('deleteCompetition').addEventListener('click', async () => {
+        const selected = document.querySelectorAll('#competitionsList li.selected');
+        if(selected.length!==1){ alert('Selecione exatamente uma competição para excluir.'); return; }
+        if(!confirm('Confirmar exclusão?')) return;
+        const index = selected[0].getAttribute('data-id');
+        if(dataSource==='api'){
+            const comp = competitionsCache[index];
+            try { await window.API.CompetitionsAPI.remove(comp.id); competitionsCache.splice(index,1); updateCompetitionsList(); alert('Competição removida da API.'); }
+            catch(e){ alert('Erro ao remover na API: '+e.message); }
+        } else {
+            const local = JSON.parse(localStorage.getItem('competitionsData'));
+            local.competitions.splice(index,1);
+            localStorage.setItem('competitionsData', JSON.stringify(local));
+            updateCompetitionsList();
         }
-        
-        const index = selectedItems[0].getAttribute('data-id');
-        const data = JSON.parse(localStorage.getItem('competitionsData'));
-        
-        data.competitions.splice(index, 1);
-        localStorage.setItem('competitionsData', JSON.stringify(data));
-        updateCompetitionsList();
     });
     
     // Adicionar seleção de itens na lista
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.closest('#competitionsList li')) {
-            const items = document.querySelectorAll('#competitionsList li');
-            items.forEach(item => item.classList.remove('selected'));
+    document.addEventListener('click', e => {
+        if(e.target && e.target.closest('#competitionsList li')){
+            document.querySelectorAll('#competitionsList li').forEach(li=>li.classList.remove('selected'));
             e.target.closest('#competitionsList li').classList.add('selected');
         }
     });
 
     // Adicionar funcionalidade de exportar dados
-    document.getElementById('exportData').addEventListener('click', function() {
-        const data = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
-
-        if (data.competitions.length === 0) {
-            alert('Nenhum dado para exportar.');
-            return;
-        }
-
-        const dataStr = JSON.stringify(data, null, 2);
-        const dataBlob = new Blob([dataStr], {type:'application/json'});
-        const url = URL.createObjectURL(dataBlob);
-
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `sgce-dados-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        alert('Dados exportados com sucesso!');
+    document.getElementById('exportData').addEventListener('click', () => {
+        const local = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
+        if(local.competitions.length===0){ alert('Nenhum dado local para exportar. (Exporta somente modo offline)'); return; }
+        const blob = new Blob([ JSON.stringify(local, null, 2) ], { type:'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href=url; a.download=`sgce-dados-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        alert('Exportação concluída.');
     });
 
     // Adicionar funcionalidade de limpar todos os dados
-    document.getElementById('clearAllData').addEventListener('click', function() {
-        if (!confirm('Tem certeza que deseja excluir TODOS os dados? Esta ação não pode ser desfeita.')) {
-            return;
-        }
-
+    document.getElementById('clearAllData').addEventListener('click', () => {
+        if(!confirm('Excluir TODOS os dados locais?')) return;
         localStorage.removeItem('competitionsData');
-        updateCompetitionsList();
-        alert('Todos os dados foram excluídos.');
+        if(dataSource==='offline') updateCompetitionsList();
+        alert('Dados locais limpos.');
     });
     
     // Função para validar dados importados
@@ -420,6 +339,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-            return { valid: true };
+        return { valid: true };
+    }
+
+    function showDataSourceBadge(){
+        let badge = document.getElementById('dataSourceBadge');
+        if(!badge){
+            badge = document.createElement('div');
+            badge.id='dataSourceBadge';
+            badge.style.position='fixed';
+            badge.style.bottom='10px';
+            badge.style.left='10px';
+            badge.style.padding='6px 10px';
+            badge.style.borderRadius='6px';
+            badge.style.fontSize='12px';
+            badge.style.fontFamily='system-ui,sans-serif';
+            badge.style.boxShadow='0 2px 6px rgba(0,0,0,.25)';
+            badge.style.zIndex='9999';
+            document.body.appendChild(badge);
         }
-    });
+        if(dataSource==='api') { badge.textContent='Fonte de dados: API (json-server)'; badge.style.background='#0d5726'; badge.style.color='#fff'; }
+        else { badge.textContent='Fonte de dados: Offline (localStorage)'; badge.style.background='#7a0016'; badge.style.color='#fff'; badge.title='Erro API: '+dataSourceError; }
+    }
+});

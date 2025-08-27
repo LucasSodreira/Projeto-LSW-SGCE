@@ -1,45 +1,178 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Recuperar dados das competições do localStorage
-    let competitionsData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
-    
-    // Se não há dados no localStorage, tentar carregar do arquivo dados.json
-    if (competitionsData.competitions.length === 0) {
-        loadDefaultData();
-    } else {
-        initializePage();
-    }
+    let competitionsData = { competitions: [] };
+    let apiRaw = { competitions: [], teams: [], matches: [] };
+    let dataSource = 'api'; // 'api' | 'fallback'
+    let dataSourceError = '';
 
-    function loadDefaultData() {
-        fetch('../dados.json')
-            .then(response => response.json())
-            .then(data => {
-                // Normalizar os dados para o formato esperado
-                const normalizedData = {
-                    competitions: [
-                        {
-                            name: "Competição Padrão",
-                            matches: data.partidas || [],
-                            teams: data.times || []
-                        }
-                    ]
-                };
-                
-                competitionsData = normalizedData;
-                localStorage.setItem('competitionsData', JSON.stringify(normalizedData));
-                initializePage();
-            })
-            .catch(error => {
-                console.error('Erro ao carregar dados padrão:', error);
-                initializePage(); // Inicializar mesmo sem dados
-            });
-    }
-
-    function initializePage() {
+    async function initializePage() {
+        // Garantir que a camada API foi carregada; se não, tenta carregar dinamicamente.
+        if(!window.API || !window.API.loadAll){
+            console.warn('API não encontrada em window. Tentando carregar script api.js dinamicamente.');
+            try {
+                await new Promise((resolve, reject)=>{
+                    const s = document.createElement('script');
+                    s.src = '../js/api.js';
+                    s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+                });
+            } catch(e){
+                console.error('Falha ao injetar api.js', e);
+            }
+        }
+        try {
+            showLoading(true);
+            apiRaw = await window.API.loadAll();
+            competitionsData = {
+                competitions: apiRaw.competitions.map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    matches: apiRaw.matches.filter(m => m.competitionId === c.id),
+                    teams: apiRaw.teams
+                }))
+            };
+            // Diagnóstico: contar partidas agregadas
+            const totalApiMatches = competitionsData.competitions.reduce((acc, c)=> acc + (Array.isArray(c.matches)? c.matches.length:0),0);
+            console.info('[Estatísticas] Partidas carregadas da API:', totalApiMatches);
+            if(totalApiMatches === 0){
+                console.warn('[Estatísticas] Nenhuma partida retornada pela API. Tentando mesclar fallback dados.json.');
+                const merged = await tryMergeFallbackMatches();
+                if(merged) console.info('[Estatísticas] Partidas adicionadas via fallback:', merged);
+            }
+            dataSource = 'api';
+            dataSourceError = '';
+        } catch(err){
+            console.error('Erro API estatísticas, tentando fallback dados.json', err);
+            dataSourceError = err && err.message ? err.message : 'Falha desconhecida';
+            const ok = await loadFallback();
+            dataSource = ok ? 'fallback' : 'erro';
+            if(!ok){
+                renderFatalError();
+                return;
+            }
+        } finally { showLoading(false); }
         setupNavigation();
         populateFilters();
         calculateStatistics();
         setupEventListeners();
+        showDataSourceBadge();
     }
+
+    async function loadFallback(){
+        const candidatePaths = ['../dados.json','./dados.json','/dados.json'];
+        for(const path of candidatePaths){
+            try {
+                const r = await fetch(path, { cache:'no-cache' });
+                if(!r.ok) throw new Error('HTTP '+r.status);
+                const data = await r.json();
+                competitionsData = {
+                    competitions: [{ name:'Competição Padrão', matches: data.partidas||[], teams: data.times||[] }]
+                };
+                return true;
+            } catch(err){ /* tenta próximo */ }
+        }
+        console.warn('Fallback dados.json falhou em todos os caminhos testados.');
+        return false;
+    }
+
+    async function tryMergeFallbackMatches(){
+        try {
+            const candidatePaths = ['../dados.json','./dados.json','/dados.json'];
+            for(const path of candidatePaths){
+                try {
+                    const r = await fetch(path, { cache:'no-cache' });
+                    if(!r.ok) continue;
+                    const data = await r.json();
+                    if(Array.isArray(data.partidas) && data.partidas.length){
+                        // Anexar partidas às competições existentes por competitionId; se não casar, coloca na primeira
+                        const byComp = new Map(competitionsData.competitions.map(c=>[c.id, c]));
+                        data.partidas.forEach(p=>{
+                            const target = byComp.get(p.competitionId) || competitionsData.competitions[0];
+                            if(!Array.isArray(target.matches)) target.matches = [];
+                            // Evitar duplicados pelo id
+                            if(!target.matches.some(m=>m.id===p.id)) target.matches.push(p);
+                        });
+                        return data.partidas.length;
+                    }
+                } catch(e){ /* tenta próximo */ }
+            }
+        } catch(e){ console.warn('Falha ao mesclar fallback:', e); }
+        return 0;
+    }
+
+    function showLoading(flag){
+        let el = document.getElementById('statsLoading');
+        if(!el){
+            el = document.createElement('div');
+            el.id='statsLoading';
+            el.style.position='fixed';
+            el.style.bottom='10px';
+            el.style.right='10px';
+            el.style.background='#222';
+            el.style.color='#fff';
+            el.style.padding='8px 12px';
+            el.style.borderRadius='6px';
+            el.style.fontSize='13px';
+            el.textContent='Carregando estatísticas...';
+            document.body.appendChild(el);
+        }
+        el.style.display = flag ? 'block' : 'none';
+    }
+
+    function showDataSourceBadge(){
+        let badge = document.getElementById('dataSourceBadge');
+        if(!badge){
+            badge = document.createElement('div');
+            badge.id = 'dataSourceBadge';
+            badge.style.position = 'fixed';
+            badge.style.bottom = '10px';
+            badge.style.left = '10px';
+            badge.style.padding = '6px 10px';
+            badge.style.borderRadius = '6px';
+            badge.style.fontSize = '12px';
+            badge.style.fontFamily = 'system-ui, sans-serif';
+            badge.style.boxShadow = '0 2px 6px rgba(0,0,0,.25)';
+            badge.style.zIndex = '9999';
+            badge.style.cursor = 'default';
+            document.body.appendChild(badge);
+        }
+        if(dataSource === 'api'){
+            badge.textContent = 'Fonte de dados: API (json-server)';
+            badge.style.background = '#0d5726';
+            badge.style.color = '#fff';
+        } else if(dataSource === 'fallback') {
+            badge.textContent = 'Fonte de dados: Fallback local (dados.json)';
+            badge.style.background = '#7a0016';
+            badge.style.color = '#fff';
+        } else {
+            badge.textContent = 'Erro ao carregar dados';
+            badge.style.background = '#8a6d00';
+            badge.style.color = '#fff';
+        }
+        badge.title = (dataSource === 'api') ?
+            'Dados carregados do json-server.' :
+            'Falha ao contatar API. Usando dados.json. Erro: ' + dataSourceError + '\nAbra via servidor (ex: Live Server) ou suba o json-server.';
+    }
+
+    function renderFatalError(){
+        const container = document.querySelector('.container');
+        if(!container) return;
+        container.innerHTML = `
+            <h1>Estatísticas</h1>
+            <div class="error-box" style="background:#2b1d1d;color:#fff;padding:16px;border-radius:8px;max-width:640px;">
+                <h2 style="margin-top:0;">Não foi possível carregar os dados</h2>
+                <p><strong>Erro:</strong> ${dataSourceError}</p>
+                <ol style="line-height:1.4;">
+                    <li>Verifique se o json-server está rodando na porta 3000.</li>
+                    <li>Ou inicie: <code>npx json-server --watch dados.json --port 3000</code></li>
+                    <li>Abra a página através de um servidor (ex: Live Server) e não diretamente via file://</li>
+                    <li>Depois clique em "Tentar novamente".</li>
+                </ol>
+                <button id="retryStats" style="margin-top:8px;padding:8px 14px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;">Tentar novamente</button>
+            </div>`;
+        document.getElementById('retryStats').addEventListener('click', ()=>{ window.location.reload(); });
+        showDataSourceBadge();
+    }
+
+    initializePage();
 
     // Navegação entre seções
     function setupNavigation() {
@@ -153,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (!stats.playerStats[playerId]) {
                                 stats.playerStats[playerId] = {
                                     name: playerName,
-                                    team: team.nome || team.id,
+                                    team: team.id || team.nome, // usar sempre o id para exibição
                                     goals: 0,
                                     assists: 0,
                                     matches: 0,
@@ -168,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Inicializar estatísticas do time
                     if (!stats.teamStats[teamId]) {
                         stats.teamStats[teamId] = {
-                            name: team.nome || teamId,
+                            name: team.id || team.nome || teamId, // força exibir id
                             matches: 0,
                             victories: 0,
                             defeats: 0,
@@ -828,9 +961,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Temporariamente substituir os dados para recálculo
         const originalData = competitionsData;
-        competitionsData = filteredData;
-        calculateStatistics();
-        competitionsData = originalData;
+    competitionsData = filteredData;
+    calculateStatistics();
+    competitionsData = originalData;
 
         // Aplicar filtro de status nas partidas exibidas
         if (selectedStatus && window.currentStats) {

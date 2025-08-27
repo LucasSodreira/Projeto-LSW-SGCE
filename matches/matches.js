@@ -1,71 +1,116 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Recuperar dados das competições do localStorage
-    let competitionsData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
-    
-    let currentEditingMatch = null;
-    let currentCompetitionIndex = null;
-    let currentMatchIndex = null;
-    
-    // Se não há dados no localStorage, tentar carregar do arquivo dados.json
-    if (competitionsData.competitions.length === 0) {
-        loadDefaultData();
-    } else {
-        // Se há dados, inicializar a página imediatamente
-        initializePage();
-    }
-    
-    function loadDefaultData() {
-        fetch('../dados.json')
-            .then(response => response.json())
-            .then(data => {
-                // Normalizar os dados para o formato esperado
-                const normalizedData = {
-                    competitions: [
-                        {
-                            name: "Competição Padrão",
-                            matches: data.partidas || [],
-                            teams: data.times || []
-                        }
-                    ]
-                };
-                
-                competitionsData = normalizedData;
-                localStorage.setItem('competitionsData', JSON.stringify(normalizedData));
-                initializePage();
-            })
-            .catch(error => {
-                console.error('Erro ao carregar dados padrão:', error);
-                // Mesmo sem dados, inicializar a página
-                initializePage();
-            });
-    }
-    
-    function initializePage() {
+    let apiState = { competitions: [], teams: [], matches: [] };
+    let currentEditingMatch = null; // objeto da partida carregada
+    let dataSource = 'api'; // 'api' | 'fallback'
+    let dataSourceError = '';
+
+    async function initializePage() {
+        // Garantir que api.js foi carregado
+        if(!window.API || !window.API.loadAll){
+            try {
+                await new Promise((resolve,reject)=>{
+                    const s=document.createElement('script');
+                    s.src='../js/api.js';
+                    s.onload=resolve; s.onerror=reject; document.head.appendChild(s);
+                });
+            } catch(e){ console.error('Falha ao injetar api.js dinamicamente', e); }
+        }
+        try {
+            showLoading(true);
+            apiState = await window.API.loadAll();
+            dataSource = 'api';
+            dataSourceError = '';
+        } catch (e) {
+            console.error('Falha ao carregar API:', e);
+            dataSourceError = e && e.message ? e.message : 'Falha desconhecida';
+            // fallback: tentar dados locais
+            await loadFallback();
+            dataSource = 'fallback';
+        } finally {
+            showLoading(false);
+        }
         populateFilters();
         renderMatches();
         setupEventListeners();
-    restoreFilters();
-    applyFilters();
-        
-        // Listener para mudanças no localStorage (quando dados são importados)
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'competitionsData') {
-                competitionsData = JSON.parse(e.newValue) || { competitions: [] };
-                populateFilters();
-                renderMatches();
-            }
-        });
-        
-        // Verificar periodicamente se os dados mudaram (para mudanças na mesma aba)
-        setInterval(function() {
-            const currentData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
-            if (JSON.stringify(currentData) !== JSON.stringify(competitionsData)) {
-                competitionsData = currentData;
-                populateFilters();
-                renderMatches();
-            }
-        }, 2000);
+        restoreFilters();
+        applyFilters();
+        showDataSourceBadge();
     }
+
+    async function loadFallback(){
+        const candidatePaths = ['../dados.json','./dados.json','/dados.json'];
+        for (const path of candidatePaths){
+            try {
+                const res = await fetch(path, { cache: 'no-cache' });
+                if(!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                apiState = {
+                    competitions: [{ id:1, name:'Competição Padrão', matches: data.partidas||[] }],
+                    teams: data.times || [],
+                    matches: data.partidas || []
+                };
+                return true;
+            } catch(err){
+                // tenta próxima rota
+            }
+        }
+        console.warn('Sem fallback disponível (dados.json não acessível em caminhos testados).');
+        return false;
+    }
+
+    function showLoading(flag){
+        let el = document.getElementById('loadingBar');
+        if(!el){
+            el = document.createElement('div');
+            el.id='loadingBar';
+            el.style.position='fixed';
+            el.style.top='0';
+            el.style.left='0';
+            el.style.width='100%';
+            el.style.padding='6px 12px';
+            el.style.background='#222';
+            el.style.color='#fff';
+            el.style.fontSize='14px';
+            el.style.zIndex='9999';
+            el.style.fontFamily='sans-serif';
+            el.textContent='Carregando...';
+            document.body.appendChild(el);
+        }
+        el.style.display = flag ? 'block' : 'none';
+    }
+
+    function showDataSourceBadge(){
+        let badge = document.getElementById('dataSourceBadge');
+        if(!badge){
+            badge = document.createElement('div');
+            badge.id = 'dataSourceBadge';
+            badge.style.position = 'fixed';
+            badge.style.bottom = '10px';
+            badge.style.left = '10px';
+            badge.style.padding = '6px 10px';
+            badge.style.borderRadius = '6px';
+            badge.style.fontSize = '12px';
+            badge.style.fontFamily = 'system-ui, sans-serif';
+            badge.style.boxShadow = '0 2px 6px rgba(0,0,0,.25)';
+            badge.style.zIndex = '9999';
+            badge.style.cursor = 'default';
+            document.body.appendChild(badge);
+        }
+        if(dataSource === 'api'){
+            badge.textContent = 'Fonte de dados: API (json-server)';
+            badge.style.background = '#0d5726';
+            badge.style.color = '#fff';
+        } else {
+            badge.textContent = 'Fonte de dados: Fallback local (dados.json)';
+            badge.style.background = '#7a0016';
+            badge.style.color = '#fff';
+        }
+        badge.title = (dataSource === 'api') ?
+            'Dados carregados do json-server.' :
+            'Falha ao contatar API. Usando dados.json. Erro: ' + dataSourceError + '\nSe abriu o arquivo direto (file://) o fetch de dados.json pode falhar; use um servidor estático ou inicie o json-server.';
+    }
+
+    initializePage();
     
     function populateFilters() {
         const competitionFilter = document.getElementById('competitionFilter');
@@ -78,17 +123,18 @@ document.addEventListener('DOMContentLoaded', function() {
         sportFilter.innerHTML = '<option value="all">Todas as modalidades</option>';
         
         // Adicionar cada competição como opção
-        competitionsData.competitions.forEach((competition, index) => {
+        apiState.competitions.forEach((competition) => {
             const option = document.createElement('option');
-            option.value = index;
+            option.value = competition.id;
             option.textContent = competition.name;
             competitionFilter.appendChild(option);
         });
 
         // Coletar modalidades únicas a partir das partidas
         const sportCounts = {};
-        competitionsData.competitions.forEach(competition => {
-            (competition.matches || []).forEach(match => {
+        apiState.competitions.forEach(competition => {
+            const compMatches = apiState.matches.filter(m => m.competitionId === competition.id) || competition.matches || [];
+            (compMatches).forEach(match => {
                 const mSport = (match.modalidade || match.sport || '').trim();
                 if (mSport) {
                     sportCounts[mSport] = (sportCounts[mSport] || 0) + 1;
@@ -109,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const matchesGrid = document.getElementById('matchesGrid');
         matchesGrid.innerHTML = '';
         
-        const matches = getAllMatches();
+    const matches = getAllMatches();
         
         if (matches.length === 0) {
             matchesGrid.innerHTML = '<p class="no-data">Nenhuma partida encontrada.</p>';
@@ -125,17 +171,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function getAllMatches() {
         const allMatches = [];
         
-        competitionsData.competitions.forEach((competition, compIndex) => {
-            if (competition.matches) {
-                competition.matches.forEach((match, matchIndex) => {
-                    allMatches.push({
-                        ...match,
-                        competitionName: competition.name,
-                        competitionIndex: compIndex,
-                        matchIndex: matchIndex
-                    });
+        apiState.competitions.forEach((competition) => {
+            const compMatches = apiState.matches.filter(m => m.competitionId === competition.id) || [];
+            compMatches.forEach(match => {
+                allMatches.push({
+                    ...match,
+                    competitionName: competition.name,
+                    competitionId: competition.id
                 });
-            }
+            });
         });
         
         // Ordenar por data (mais recentes primeiro)
@@ -147,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
         card.className = 'match-card';
         card.setAttribute('data-sport', (matchData.modalidade || '').toLowerCase());
         card.setAttribute('data-status', (matchData.status || '').toLowerCase().replace(' ', '_'));
-        card.setAttribute('data-competition', matchData.competitionIndex);
+        card.setAttribute('data-competition', matchData.competitionId);
         card.setAttribute('data-date', matchData.data);
         
         // Determinar classe do status
@@ -249,8 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Salvar informações para edição
         currentEditingMatch = matchData;
-        currentCompetitionIndex = matchData.competitionIndex;
-        currentMatchIndex = matchData.matchIndex;
+    // competitionId já presente no objeto matchData
         
         modal.style.display = 'block';
     }
@@ -286,9 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Botões de administração (apenas se for admin)
         const currentUser = JSON.parse(localStorage.getItem('currentUser'));
         if (currentUser && currentUser.role === 'admin') {
-            document.getElementById('editMatchBtn').addEventListener('click', openEditModal);
-            document.getElementById('deleteMatchBtn').addEventListener('click', deleteMatch);
-            document.getElementById('editMatchForm').addEventListener('submit', saveMatchEdit);
+        document.getElementById('editMatchBtn').addEventListener('click', openEditModal);
+        document.getElementById('deleteMatchBtn').addEventListener('click', deleteMatch);
+        document.getElementById('editMatchForm').addEventListener('submit', saveMatchEdit);
             document.getElementById('cancelEditBtn').addEventListener('click', () => {
                 document.getElementById('editMatchModal').style.display = 'none';
             });
@@ -387,53 +430,69 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveMatchEdit(event) {
         event.preventDefault();
         
-        if (currentCompetitionIndex === null || currentMatchIndex === null) return;
-        
+        if (!currentEditingMatch) return;
         const scoreA = document.getElementById('editTeamAScore').value;
         const scoreB = document.getElementById('editTeamBScore').value;
         const status = document.getElementById('editMatchStatus').value;
         const date = document.getElementById('editMatchDate').value;
-        
-        // Atualizar os dados
-        competitionsData.competitions[currentCompetitionIndex].matches[currentMatchIndex].placar = `${scoreA}-${scoreB}`;
-        competitionsData.competitions[currentCompetitionIndex].matches[currentMatchIndex].status = status;
-        competitionsData.competitions[currentCompetitionIndex].matches[currentMatchIndex].data = date;
-        
-        // Salvar no localStorage
-        localStorage.setItem('competitionsData', JSON.stringify(competitionsData));
-    // Disparar evento customizado para outras páginas (ex: estatísticas) se estiverem abertas
-    try { window.dispatchEvent(new Event('competitionsDataUpdated')); } catch(e) {}
-        
-        // Fechar modal e atualizar visualização
-        document.getElementById('editMatchModal').style.display = 'none';
-        document.getElementById('matchModal').style.display = 'none';
-        renderMatches();
-        
-        alert('Partida atualizada com sucesso!');
+        const payload = {
+            ...currentEditingMatch,
+            placar: `${scoreA}-${scoreB}`,
+            status,
+            data: date
+        };
+        ;(async ()=>{
+            try {
+                showLoading(true);
+                // Usar PATCH para atualizar apenas campos alterados
+                await window.API.MatchesAPI.patch(payload.id, { placar: payload.placar, status, data: date });
+                // Atualizar em memória
+                apiState.matches = apiState.matches.map(m => m.id === payload.id ? payload : m);
+                document.getElementById('editMatchModal').style.display = 'none';
+                document.getElementById('matchModal').style.display = 'none';
+                renderMatches();
+                alert('Partida atualizada com sucesso!');
+            } catch(err){
+                console.error(err);
+                alert('Erro ao salvar partida');
+            } finally { showLoading(false); }
+        })();
     }
     
     function deleteMatch() {
         if (!confirm('Tem certeza que deseja excluir esta partida?')) return;
         
-        if (currentCompetitionIndex === null || currentMatchIndex === null) return;
-        
-        // Remover a partida
-        competitionsData.competitions[currentCompetitionIndex].matches.splice(currentMatchIndex, 1);
-        
-        // Salvar no localStorage
-        localStorage.setItem('competitionsData', JSON.stringify(competitionsData));
-        
-        // Fechar modal e atualizar visualização
-        document.getElementById('matchModal').style.display = 'none';
-        renderMatches();
-        
-        alert('Partida excluída com sucesso!');
+        if (!currentEditingMatch) return;
+        (async ()=>{
+            try {
+                showLoading(true);
+                if(dataSource === 'fallback') {
+                    // Não há como persistir em dados.json via frontend; apenas remover em memória
+                    apiState.matches = apiState.matches.filter(m => m.id !== currentEditingMatch.id);
+                    document.getElementById('matchModal').style.display = 'none';
+                    renderMatches();
+                    alert('Partida removida somente na visualização (fallback local). Rode o json-server para exclusão persistente.');
+                } else {
+                    await window.API.MatchesAPI.remove(currentEditingMatch.id);
+                    apiState.matches = apiState.matches.filter(m => m.id !== currentEditingMatch.id);
+                    document.getElementById('matchModal').style.display = 'none';
+                    renderMatches();
+                    alert('Partida excluída com sucesso!');
+                }
+            } catch(err){
+                console.error(err);
+                alert('Erro ao excluir partida');
+            } finally { showLoading(false); }
+        })();
     }
     
     // Função global para recarregar dados (pode ser chamada de outras páginas)
-    window.reloadMatchesData = function() {
-        competitionsData = JSON.parse(localStorage.getItem('competitionsData')) || { competitions: [] };
-        populateFilters();
-        renderMatches();
+    window.reloadMatchesData = async function() {
+        try {
+            showLoading(true);
+            apiState = await window.API.loadAll();
+            populateFilters();
+            renderMatches();
+        } finally { showLoading(false); }
     };
 });
