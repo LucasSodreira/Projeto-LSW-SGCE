@@ -1,15 +1,27 @@
 {
   "competicoes": [
     {
-      "id": 1,
+      "id": "1",
       "name": "Competição Geral 2024-2025",
       "season": "2024-2025",
       "descricao": "Consolidação de todas as modalidades do ano letivo"
+    },
+    {
+      "id": "f07e",
+      "name": "Campeonato 2027",
+      "season": "2025",
+      "descricao": "Consolidação letivo"
+    },
+    {
+      "id": "3c7b",
+      "name": "Campeonato 2026",
+      "season": "2025",
+      "descricao": "Consolidação letivo"
     }
   ],
   "partidas": [
     {
-      "id": 1,
+      "id": "1",
       "equipeA": "Dragões FC",
       "equipeB": "Águias United",
       "modalidade": "Futebol",
@@ -19,7 +31,7 @@
       "competitionId": 1
     },
     {
-      "id": 2,
+      "id": "2",
       "equipeA": "Leões SC",
       "equipeB": "Tigres FC",
       "modalidade": "Futebol",
@@ -29,7 +41,7 @@
       "competitionId": 1
     },
     {
-      "id": 3,
+      "id": "3",
       "equipeA": "Falcões Vôlei",
       "equipeB": "Panteras Vôlei",
       "modalidade": "Vôlei",
@@ -39,7 +51,7 @@
       "competitionId": 1
     },
     {
-      "id": 4,
+      "id": "4",
       "equipeA": "Tubarões Basketball",
       "equipeB": "Cobras Basketball",
       "modalidade": "Basquete",
@@ -49,7 +61,7 @@
       "competitionId": 1
     },
     {
-      "id": 5,
+      "id": "5",
       "equipeA": "Águias United",
       "equipeB": "Leões SC",
       "modalidade": "Futebol",
@@ -59,7 +71,7 @@
       "competitionId": 1
     },
     {
-      "id": 6,
+      "id": "6",
       "equipeA": "Tigres FC",
       "equipeB": "Dragões FC",
       "modalidade": "Futebol",
@@ -69,7 +81,7 @@
       "competitionId": 1
     },
     {
-      "id": 7,
+      "id": "7",
       "equipeA": "Panteras Vôlei",
       "equipeB": "Falcões Vôlei",
       "modalidade": "Vôlei",
@@ -79,7 +91,7 @@
       "competitionId": 1
     },
     {
-      "id": 8,
+      "id": "8",
       "equipeA": "Cobras Basketball",
       "equipeB": "Tubarões Basketball",
       "modalidade": "Basquete",
@@ -89,7 +101,7 @@
       "competitionId": 1
     },
     {
-      "id": 9,
+      "id": "9",
       "equipeA": "Dragões FC",
       "equipeB": "Leões SC",
       "modalidade": "Futebol",
@@ -99,7 +111,7 @@
       "competitionId": 1
     },
     {
-      "id": 10,
+      "id": "10",
       "equipeA": "Águias United",
       "equipeB": "Tigres FC",
       "modalidade": "Futebol",
@@ -109,7 +121,7 @@
       "competitionId": 1
     },
     {
-      "id": 11,
+      "id": "11",
       "equipeA": "Lobos Handebol",
       "equipeB": "Ursos Handebol",
       "modalidade": "Handebol",
@@ -119,7 +131,7 @@
       "competitionId": 1
     },
     {
-      "id": 12,
+      "id": "12",
       "equipeA": "Falcões Vôlei",
       "equipeB": "Panteras Vôlei",
       "modalidade": "Vôlei",
@@ -129,7 +141,7 @@
       "competitionId": 1
     },
     {
-      "id": 13,
+      "id": "13",
       "equipeA": "Tubarões Basketball",
       "equipeB": "Cobras Basketball",
       "modalidade": "Basquete",
@@ -139,7 +151,7 @@
       "competitionId": 1
     },
     {
-      "id": 14,
+      "id": "14",
       "equipeA": "Leões SC",
       "equipeB": "Águias United",
       "modalidade": "Futebol",
@@ -149,7 +161,7 @@
       "competitionId": 1
     },
     {
-      "id": 15,
+      "id": "15",
       "equipeA": "Tigres FC",
       "equipeB": "Dragões FC",
       "modalidade": "Futebol",
@@ -159,7 +171,7 @@
       "competitionId": 1
     },
     {
-      "id": 16,
+      "id": "16",
       "equipeA": "Ursos Handebol",
       "equipeB": "Lobos Handebol",
       "modalidade": "Handebol",
@@ -169,7 +181,7 @@
       "competitionId": 1
     },
     {
-      "id": 17,
+      "id": "17",
       "equipeA": "Panteras Vôlei",
       "equipeB": "Falcões Vôlei",
       "modalidade": "Vôlei",
@@ -179,7 +191,7 @@
       "competitionId": 1
     },
     {
-      "id": 18,
+      "id": "18",
       "equipeA": "Cobras Basketball",
       "equipeB": "Tubarões Basketball",
       "modalidade": "Basquete",
@@ -189,7 +201,7 @@
       "competitionId": 1
     },
     {
-      "id": 19,
+      "id": "19",
       "equipeA": "Dragões FC",
       "equipeB": "Tigres FC",
       "modalidade": "Futebol",
@@ -199,7 +211,7 @@
       "competitionId": 1
     },
     {
-      "id": 20,
+      "id": "20",
       "equipeA": "Leões SC",
       "equipeB": "Águias United",
       "modalidade": "Futebol",
@@ -209,7 +221,7 @@
       "competitionId": 1
     },
     {
-      "id": 21,
+      "id": "21",
       "equipeA": "Falcões Vôlei",
       "equipeB": "Panteras Vôlei",
       "modalidade": "Vôlei",
@@ -219,7 +231,7 @@
       "competitionId": 1
     },
     {
-      "id": 22,
+      "id": "22",
       "equipeA": "Tubarões Basketball",
       "equipeB": "Cobras Basketball",
       "modalidade": "Basquete",
@@ -229,7 +241,7 @@
       "competitionId": 1
     },
     {
-      "id": 23,
+      "id": "23",
       "equipeA": "Lobos Handebol",
       "equipeB": "Ursos Handebol",
       "modalidade": "Handebol",
